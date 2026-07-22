@@ -1,45 +1,41 @@
-import { extension_settings, getContext } from "../../../extensions.js";
-import { saveSettingsDebounced } from "../../../../script.js";
-
 const extensionName = "message-reactions";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 
-const defaultSettings = {
-    enabled: false
-};
+// สร้างคีย์เฉพาะสำหรับบันทึกข้อมูล
+const storageKey = `SillyTavern_Ext_${extensionName}`;
 
-async function loadSettings() {
-    extension_settings[extensionName] = extension_settings[extensionName] || {};
+function loadSettings() {
+    // ดึงข้อมูลจากหน่วยความจำเบราว์เซอร์โดยตรง
+    const savedData = localStorage.getItem(storageKey);
+    let isEnabled = false;
 
-    if (Object.keys(extension_settings[extensionName]).length === 0) {
-        Object.assign(extension_settings[extensionName], defaultSettings);
+    if (savedData) {
+        try {
+            const parsed = JSON.parse(savedData);
+            isEnabled = parsed.enabled;
+        } catch (e) {
+            console.error("Failed to parse saved settings");
+        }
     }
 
-    $("#mr_enable_checkbox").prop("checked", extension_settings[extensionName].enabled);
+    $("#mr_enable_checkbox").prop("checked", isEnabled);
 }
 
 function onCheckboxChange(event) {
     const value = Boolean($(event.target).prop("checked"));
-    extension_settings[extensionName].enabled = value;
-    // เซฟอัตโนมัติแบบเดิม
-    saveSettingsDebounced();
+
+    // บันทึกลงหน่วยความจำเบราว์เซอร์ทันที
+    const dataToSave = { enabled: value };
+    localStorage.setItem(storageKey, JSON.stringify(dataToSave));
 }
 
-// เพิ่ม: ฟังก์ชันสำหรับปุ่มบังคับเซฟ
 function onForceSaveClick() {
-    // บังคับเซฟทันทีโดยไม่รอ
     const value = Boolean($("#mr_enable_checkbox").prop("checked"));
-    extension_settings[extensionName].enabled = value;
 
-    // เรียกใช้ saveSettings ของระบบหลัก (ถ้ามี) หรือใช้ debounced
-    if (typeof window.saveSettings === 'function') {
-        window.saveSettings();
-    } else {
-        saveSettingsDebounced();
-    }
+    // บังคับเขียนลง LocalStorage อีกรอบเพื่อความชัวร์
+    localStorage.setItem(storageKey, JSON.stringify({ enabled: value }));
 
-    // แจ้งเตือนบนหน้าจอให้รู้ว่ากดติดแล้ว
-    toastr.success("บันทึกการตั้งค่าแล้ว! ลองรีเฟรชดูครับ", "Message Reactions");
+    toastr.success("บันทึกลงหน่วยความจำดิบแล้ว!", "Message Reactions");
 }
 
 jQuery(async () => {
@@ -48,7 +44,6 @@ jQuery(async () => {
         $("#extensions_settings2").append(settingsHtml);
 
         $("#mr_enable_checkbox").on("input", onCheckboxChange);
-        // เพิ่ม: ผูกปุ่มเข้ากับฟังก์ชัน
         $("#mr_force_save_btn").on("click", onForceSaveClick);
 
         loadSettings();

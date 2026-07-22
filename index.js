@@ -1,53 +1,45 @@
+import { getContext } from "../../../extensions.js";
+import { eventSource, event_types } from "../../../../script.js";
+
 const extensionName = "message-reactions";
-const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 
-// สร้างคีย์เฉพาะสำหรับบันทึกข้อมูล
-const storageKey = `SillyTavern_Ext_${extensionName}`;
+// ฟังก์ชันสร้างปุ่มรีแอคชัน
+function addReactionButtons() {
+    // หาข้อความทั้งหมดที่ยังไม่มีคลาส 'has-reaction-btn'
+    const messages = $('.mes:not(.has-reaction-btn)');
 
-function loadSettings() {
-    // ดึงข้อมูลจากหน่วยความจำเบราว์เซอร์โดยตรง
-    const savedData = localStorage.getItem(storageKey);
-    let isEnabled = false;
+    messages.each(function() {
+        const msg = $(this);
 
-    if (savedData) {
-        try {
-            const parsed = JSON.parse(savedData);
-            isEnabled = parsed.enabled;
-        } catch (e) {
-            console.error("Failed to parse saved settings");
-        }
-    }
+        // สร้าง HTML ของปุ่ม (ใช้ไอคอนหัวใจของ FontAwesome ที่มีอยู่ในระบบ)
+        const btnHtml = `
+            <div class="msg-reaction-container" style="display: flex; gap: 5px; margin-top: 5px; padding-left: 10px;">
+                <div class="reaction-btn heart-btn" title="Like">
+                    <i class="fa-regular fa-heart"></i>
+                </div>
+                <div class="reaction-btn comment-btn" title="Comment">
+                    <i class="fa-regular fa-comment"></i>
+                </div>
+            </div>
+        `;
 
-    $("#mr_enable_checkbox").prop("checked", isEnabled);
+        // แทรกปุ่มไว้ใต้เนื้อหาข้อความ
+        msg.find('.mes_text').after(btnHtml);
+
+        // ทำเครื่องหมายว่าข้อความนี้ใส่ปุ่มไปแล้ว จะได้ไม่ใส่ซ้ำ
+        msg.addClass('has-reaction-btn');
+    });
 }
 
-function onCheckboxChange(event) {
-    const value = Boolean($(event.target).prop("checked"));
-
-    // บันทึกลงหน่วยความจำเบราว์เซอร์ทันที
-    const dataToSave = { enabled: value };
-    localStorage.setItem(storageKey, JSON.stringify(dataToSave));
-}
-
-function onForceSaveClick() {
-    const value = Boolean($("#mr_enable_checkbox").prop("checked"));
-
-    // บังคับเขียนลง LocalStorage อีกรอบเพื่อความชัวร์
-    localStorage.setItem(storageKey, JSON.stringify({ enabled: value }));
-
-    toastr.success("บันทึกลงหน่วยความจำดิบแล้ว!", "Message Reactions");
-}
-
+// ผูกฟังก์ชันเข้ากับเหตุการณ์ของระบบ
 jQuery(async () => {
-    try {
-        const settingsHtml = await $.get(`${extensionFolderPath}/settings.html`);
-        $("#extensions_settings2").append(settingsHtml);
+    console.log(`[${extensionName}] Loading... (Plug & Play Mode)`);
 
-        $("#mr_enable_checkbox").on("input", onCheckboxChange);
-        $("#mr_force_save_btn").on("click", onForceSaveClick);
+    // แทรกปุ่มทันทีที่โหลดเสร็จ
+    addReactionButtons();
 
-        loadSettings();
-    } catch (error) {
-        console.error(`[${extensionName}] Failed to load:`, error);
-    }
+    // แทรกปุ่มทุกครั้งที่มีการเปลี่ยนแชทหรือข้อความถูกวาดใหม่
+    eventSource.on(event_types.CHAT_CHANGED, addReactionButtons);
+    eventSource.on(event_types.MESSAGE_RECEIVED, addReactionButtons);
+    eventSource.on(event_types.MESSAGE_UPDATED, addReactionButtons);
 });

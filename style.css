@@ -1,1 +1,23 @@
+.msg-reaction-container {
+    opacity: 0.5; /* ทำให้จางลงนิดหน่อยตอนปกติ */
+    transition: opacity 0.2s;
+}
 
+/* พอเอานิ้วไปแตะ (หรือเมาส์ชี้) ให้ชัดขึ้น */
+.mes:hover .msg-reaction-container {
+    opacity: 1;
+}
+
+.reaction-btn {
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.1); /* สีพื้นหลังโปร่งใส */
+    color: var(--SmartThemeBodyColor); /* ใช้สีตัวอักษรของธีมปัจจุบัน */
+}
+
+/* สีตอนกดหรือแตะ */
+.reaction-btn:active {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(0.95);
+}

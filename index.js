@@ -3,17 +3,17 @@ import { eventSource, event_types } from "../../../../script.js";
 
 const extensionName = "message-reactions";
 
-// ฟังก์ชันสร้างปุ่มรีแอคชัน
 function addReactionButtons() {
-    // หาข้อความทั้งหมดที่ยังไม่มีคลาส 'has-reaction-btn'
-    const messages = $('.mes:not(.has-reaction-btn)');
+    // หาข้อความที่ยังไม่มีปุ่ม และ **ไม่ใช่ข้อความของ User**
+    // ใน ST ข้อความ user จะมีแอตทริบิวต์ is_user="true" หรืออยู่ใน <div class="mes" ...>
+    // เราจะกรองเอาเฉพาะอันที่ไม่มีแอตทริบิวต์ is_user
+    const messages = $('.mes:not(.has-reaction-btn):not([is_user="true"])');
 
     messages.each(function() {
         const msg = $(this);
 
-        // สร้าง HTML ของปุ่ม (ใช้ไอคอนหัวใจของ FontAwesome ที่มีอยู่ในระบบ)
         const btnHtml = `
-            <div class="msg-reaction-container" style="display: flex; gap: 5px; margin-top: 5px; padding-left: 10px;">
+            <div class="msg-reaction-container" style="display: flex; gap: 8px; margin-top: 5px; padding-left: 10px;">
                 <div class="reaction-btn heart-btn" title="Like">
                     <i class="fa-regular fa-heart"></i>
                 </div>
@@ -23,23 +23,32 @@ function addReactionButtons() {
             </div>
         `;
 
-        // แทรกปุ่มไว้ใต้เนื้อหาข้อความ
         msg.find('.mes_text').after(btnHtml);
-
-        // ทำเครื่องหมายว่าข้อความนี้ใส่ปุ่มไปแล้ว จะได้ไม่ใส่ซ้ำ
         msg.addClass('has-reaction-btn');
     });
 }
 
-// ผูกฟังก์ชันเข้ากับเหตุการณ์ของระบบ
 jQuery(async () => {
-    console.log(`[${extensionName}] Loading... (Plug & Play Mode)`);
+    console.log(`[${extensionName}] Loading... (Filtered + Cute Mode)`);
 
-    // แทรกปุ่มทันทีที่โหลดเสร็จ
     addReactionButtons();
 
-    // แทรกปุ่มทุกครั้งที่มีการเปลี่ยนแชทหรือข้อความถูกวาดใหม่
     eventSource.on(event_types.CHAT_CHANGED, addReactionButtons);
     eventSource.on(event_types.MESSAGE_RECEIVED, addReactionButtons);
     eventSource.on(event_types.MESSAGE_UPDATED, addReactionButtons);
+
+    // เพิ่มลูกเล่น: เวลากดปุ่มหัวใจให้เปลี่ยนไอคอนและสลับคลาส
+    $(document).on('click', '.heart-btn', function() {
+        const icon = $(this).find('i');
+
+        // สลับระหว่างหัวใจโปร่ง กับหัวใจทึบ
+        if (icon.hasClass('fa-regular')) {
+            icon.removeClass('fa-regular').addClass('fa-solid active-heart');
+            // ใส่แอนิเมชันเด้งดึ๋ง
+            $(this).addClass('pop-anim');
+            setTimeout(() => $(this).removeClass('pop-anim'), 300); // เอาคลาสออกหลังเล่นแอนิเมชันจบ
+        } else {
+            icon.removeClass('fa-solid active-heart').addClass('fa-regular');
+        }
+    });
 });

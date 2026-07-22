@@ -2,11 +2,8 @@ import { getContext } from "../../../extensions.js";
 import { eventSource, event_types, saveSettingsDebounced } from "../../../../script.js";
 
 const extensionName = "message-reactions";
-
-// สร้างที่เก็บความจำ (Database จำลอง)
 let reactionsDB = {};
 
-// โหลดความจำตอนเปิดระบบ
 function loadReactions() {
     const saved = localStorage.getItem(`${extensionName}_db`);
     if (saved) {
@@ -14,36 +11,53 @@ function loadReactions() {
     }
 }
 
-// เซฟความจำ
 function saveReactions() {
     localStorage.setItem(`${extensionName}_db`, JSON.stringify(reactionsDB));
 }
 
+// ฟังก์ชันสร้างรหัสเฉพาะให้แต่ละข้อความ
+function generateUniqueId(msgElement) {
+    const context = getContext();
+    const characterId = context.characterId || "unknown_char";
+    const mesId = msgElement.attr('mesid');
+    const sendTime = msgElement.attr('send_date') || "no_time";
+
+    // รวมชื่อแชท, ลำดับ, และเวลาเข้าด้วยกัน จะได้ไม่ซ้ำกันเด็ดขาด
+    return `${characterId}_${mesId}_${sendTime}`;
+}
+
 function addReactionButtons() {
-    // แก้บั๊กตัวกรอง: ค้นหาข้อความทั้งหมดก่อน
+    // แก้บั๊กฝั่ง User: ใช้ Selector ที่เจาะจงเฉพาะข้อความฝั่งตรงข้าม
+    // ข้อความฝั่งเราปกติจะมีคลาส mes_you หรือไม่ก็ถูกห่อในโครงสร้างอื่น
     const messages = $('.mes:not(.has-reaction-btn)');
 
     messages.each(function() {
         const msg = $(this);
-        const mesId = msg.attr('mesid'); // เอา ID ของข้อความมาใช้เป็นรหัสอ้างอิง
-        const chName = msg.attr('ch_name'); // ชื่อคนส่ง
+        const chName = msg.attr('ch_name');
 
-        // ตัวกรองขั้นเด็ดขาด: เช็คทั้ง attribute และลักษณะของ DOM
-        // ถ้าเป็นชื่อ 'You' หรือมีแอตทริบิวต์ is_user หรือ avatar เป็นฝั่งขวา ให้ข้ามไปเลย
-        if (msg.attr('is_user') === 'true' || chName === 'You' || msg.find('.avatar-container').hasClass('user-avatar')) {
-            return; // ออกจากการวนลูปนี้ทันที ไม่ใส่ปุ่ม
+        // ตัวกรองขั้นสูงสุด: ตรวจสอบหลายเงื่อนไข
+        const isUserMessage =
+            msg.attr('is_user') === 'true' ||
+            msg.hasClass('mes_you') ||
+            chName === 'You' ||
+            msg.find('.name_text').text().trim() === 'You' ||
+            msg.find('.avatar-container img').attr('src')?.includes('user');
+
+        if (isUserMessage) {
+            return; // เจอฝั่งคุณ ข้ามทิ้งทันที!
         }
 
-        // ตรวจสอบว่าข้อความนี้เคยถูกกดหัวใจไว้ในความจำหรือเปล่า
-        const isFavorited = reactionsDB[mesId]?.is_favorited || false;
+        // สร้างรหัสเฉพาะของข้อความนี้
+        const uniqueMsgId = generateUniqueId(msg);
+        const isFavorited = reactionsDB[uniqueMsgId]?.is_favorited || false;
         const heartClass = isFavorited ? 'fa-solid active-heart' : 'fa-regular';
 
         const btnHtml = `
             <div class="msg-reaction-container" style="display: flex; gap: 8px; margin-top: 5px; padding-left: 10px;">
-                <div class="reaction-btn heart-btn" title="Like" data-mesid="${mesId}">
+                <div class="reaction-btn heart-btn" title="Like" data-uniquekey="${uniqueMsgId}">
                     <i class="fa-heart ${heartClass}"></i>
                 </div>
-                <div class="reaction-btn comment-btn" title="Comment" data-mesid="${mesId}">
+                <div class="reaction-btn comment-btn" title="Comment" data-uniquekey="${uniqueMsgId}">
                     <i class="fa-regular fa-comment"></i>
                 </div>
             </div>
@@ -55,7 +69,7 @@ function addReactionButtons() {
 }
 
 jQuery(async () => {
-    console.log(`[${extensionName}] Loading... (Memory System Enabled)`);
+    console.log(`[${extensionName}] Loading... (Bug Fixes: Anti-Sync & Strict User Filter)`);
 
     loadReactions();
     addReactionButtons();
@@ -64,29 +78,24 @@ jQuery(async () => {
     eventSource.on(event_types.MESSAGE_RECEIVED, addReactionButtons);
     eventSource.on(event_types.MESSAGE_UPDATED, addReactionButtons);
 
-    // ระบบบันทึกเมื่อกดหัวใจ
+    // ระบบบันทึกที่อิงจาก Unique Key
     $(document).on('click', '.heart-btn', function() {
         const icon = $(this).find('i');
-        const mesId = $(this).attr('data-mesid'); // ดึง ID ข้อความมา
+        const uniqueKey = $(this).attr('data-uniquekey'); // ดึงรหัสเฉพาะมาใช้
 
-        // สร้างพื้นที่เก็บข้อมูลให้ข้อความนี้ถ้ายังไม่มี
-        if (!reactionsDB[mesId]) reactionsDB[mesId] = {};
+        if (!reactionsDB[uniqueKey]) reactionsDB[uniqueKey] = {};
 
         if (icon.hasClass('fa-regular')) {
-            // โหมดกดหัวใจ
             icon.removeClass('fa-regular').addClass('fa-solid active-heart');
             $(this).addClass('pop-anim');
             setTimeout(() => $(this).removeClass('pop-anim'), 300);
 
-            reactionsDB[mesId].is_favorited = true; // บันทึกลงสมอง
-            console.log(`[${extensionName}] Saved Favorite: Msg ${mesId}`);
+            reactionsDB[uniqueKey].is_favorited = true;
         } else {
-            // โหมดเอาหัวใจออก
             icon.removeClass('fa-solid active-heart').addClass('fa-regular');
-            reactionsDB[mesId].is_favorited = false; // ลบออกจากสมอง
-            console.log(`[${extensionName}] Removed Favorite: Msg ${mesId}`);
+            reactionsDB[uniqueKey].is_favorited = false;
         }
 
-        saveReactions(); // สั่งให้จำ!
+        saveReactions();
     });
 });

@@ -1,15 +1,13 @@
-import { extension_settings, getContext, loadExtensionSettings } from "../../../extensions.js";
+import { extension_settings, getContext } from "../../../extensions.js";
 import { saveSettingsDebounced } from "../../../../script.js";
 
 const extensionName = "message-reactions";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 
-// เพิ่ม: ค่าเริ่มต้น
 const defaultSettings = {
     enabled: false
 };
 
-// เพิ่ม: ฟังก์ชันโหลดการตั้งค่า
 async function loadSettings() {
     extension_settings[extensionName] = extension_settings[extensionName] || {};
 
@@ -20,29 +18,41 @@ async function loadSettings() {
     $("#mr_enable_checkbox").prop("checked", extension_settings[extensionName].enabled);
 }
 
-// เพิ่ม: ฟังก์ชันเมื่อมีการคลิก Checkbox
 function onCheckboxChange(event) {
     const value = Boolean($(event.target).prop("checked"));
     extension_settings[extensionName].enabled = value;
+    // เซฟอัตโนมัติแบบเดิม
     saveSettingsDebounced();
-    console.log(`[${extensionName}] Setting saved:`, value);
+}
+
+// เพิ่ม: ฟังก์ชันสำหรับปุ่มบังคับเซฟ
+function onForceSaveClick() {
+    // บังคับเซฟทันทีโดยไม่รอ
+    const value = Boolean($("#mr_enable_checkbox").prop("checked"));
+    extension_settings[extensionName].enabled = value;
+
+    // เรียกใช้ saveSettings ของระบบหลัก (ถ้ามี) หรือใช้ debounced
+    if (typeof window.saveSettings === 'function') {
+        window.saveSettings();
+    } else {
+        saveSettingsDebounced();
+    }
+
+    // แจ้งเตือนบนหน้าจอให้รู้ว่ากดติดแล้ว
+    toastr.success("บันทึกการตั้งค่าแล้ว! ลองรีเฟรชดูครับ", "Message Reactions");
 }
 
 jQuery(async () => {
-    console.log(`[${extensionName}] Loading...`);
-
     try {
         const settingsHtml = await $.get(`${extensionFolderPath}/settings.html`);
         $("#extensions_settings2").append(settingsHtml);
 
-        // เพิ่ม: ผูกเหตุการณ์คลิกกับ Checkbox
         $("#mr_enable_checkbox").on("input", onCheckboxChange);
+        // เพิ่ม: ผูกปุ่มเข้ากับฟังก์ชัน
+        $("#mr_force_save_btn").on("click", onForceSaveClick);
 
-        // เพิ่ม: โหลดการตั้งค่าเมื่อเปิดขึ้นมา
         loadSettings();
-
-        console.log(`[${extensionName}] ✅ Loaded successfully`);
     } catch (error) {
-        console.error(`[${extensionName}] ❌ Failed to load:`, error);
+        console.error(`[${extensionName}] Failed to load:`, error);
     }
 });

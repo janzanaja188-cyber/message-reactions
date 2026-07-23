@@ -50,12 +50,12 @@ function injectModals() {
         <div id="st-mm-main-modal" class="st-mm-modal-overlay" style="display: none;">
             <div class="st-mm-modal-content st-ios-panel">
                 <div class="st-mm-modal-header">
-                    <h2><i class="fa-solid fa-book-bookmark"></i> Memory Vault</h2>
-                    <button class="st-mm-close-btn" id="st-mm-close-main"><i class="fa-solid fa-xmark"></i></button>
+                    <h2><i class="fa-solid fa-book-bookmark"></i> คลังความทรงจำ</h2>
+                    <button class="st-mm-close-btn" id="st-mm-close-main" title="ปิด"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 <div class="st-mm-tabs">
-                    <button class="st-mm-tab active" data-tab="hearts"><i class="fa-solid fa-heart"></i> Favorites</button>
-                    <button class="st-mm-tab" data-tab="comments"><i class="fa-solid fa-comment-dots"></i> Comments</button>
+                    <button class="st-mm-tab active" data-tab="hearts"><i class="fa-solid fa-heart"></i> ที่ชอบ</button>
+                    <button class="st-mm-tab" data-tab="comments"><i class="fa-solid fa-comment-dots"></i> ความคิดเห็น</button>
                 </div>
                 <div class="st-mm-list-container ios-scroll" id="st-mm-list-container"></div>
             </div>
@@ -64,16 +64,16 @@ function injectModals() {
         <div id="st-mm-comment-modal" class="st-mm-modal-overlay" style="display: none;">
             <div class="st-mm-modal-content st-mm-comment-box st-ios-panel">
                 <div class="st-mm-modal-header">
-                    <h2><i class="fa-solid fa-pen-nib"></i> Add Comment</h2>
+                    <h2><i class="fa-solid fa-pen-nib"></i> เพิ่มความคิดเห็น</h2>
                 </div>
                 <div class="st-mm-modal-body">
-                    <input type="text" id="st-mm-comment-title" class="st-ios-input" placeholder="Title (Optional)" autocomplete="off" />
-                    <textarea id="st-mm-comment-detail" class="st-ios-input ios-scroll" placeholder="Write your thoughts here..." rows="4"></textarea>
+                    <input type="text" id="st-mm-comment-title" class="st-ios-input" placeholder="หัวข้อ (ไม่บังคับ)" autocomplete="off" />
+                    <textarea id="st-mm-comment-detail" class="st-ios-input ios-scroll" placeholder="พิมพ์ความคิดเห็นของคุณที่นี่..." rows="4"></textarea>
                     <input type="hidden" id="st-mm-comment-mesid" />
                 </div>
                 <div class="st-mm-modal-footer">
-                    <button id="st-mm-comment-cancel" class="st-mm-btn-ios-secondary">Cancel</button>
-                    <button id="st-mm-comment-save" class="st-mm-btn-ios-primary">Save</button>
+                    <button id="st-mm-comment-cancel" class="st-mm-btn-ios-secondary">ยกเลิก</button>
+                    <button id="st-mm-comment-save" class="st-mm-btn-ios-primary">บันทึก</button>
                 </div>
             </div>
         </div>
@@ -102,9 +102,9 @@ function injectButtons(mesId) {
     container.className = 'st-mm-button-container';
 
     container.innerHTML = `
-        <button class="st-mm-btn st-mm-heart" data-mesid="${mesId}" title="Like"><i class="fa-solid fa-heart"></i></button>
-        <button class="st-mm-btn st-mm-comment" data-mesid="${mesId}" title="Comment"><i class="fa-solid fa-comment"></i></button>
-        <button class="st-mm-btn st-mm-book" data-mesid="${mesId}" title="Memory Vault"><i class="fa-solid fa-book"></i></button>
+        <button class="st-mm-btn st-mm-heart" data-mesid="${mesId}" title="ถูกใจ"><i class="fa-solid fa-heart"></i></button>
+        <button class="st-mm-btn st-mm-comment" data-mesid="${mesId}" title="ความคิดเห็น"><i class="fa-solid fa-comment"></i></button>
+        <button class="st-mm-btn st-mm-book" data-mesid="${mesId}" title="คลังความทรงจำ"><i class="fa-solid fa-book"></i></button>
     `;
 
     const mesText = mesBlock.querySelector('.mes_text');
@@ -160,7 +160,7 @@ function renderMemoryList(activeTab) {
         container.append(`
             <div class="st-mm-empty">
                 <i class="fa-solid fa-box-open"></i>
-                <span>No records found in this category.</span>
+                <span>ไม่พบข้อมูลในหมวดหมู่นี้</span>
             </div>
         `);
         return;
@@ -173,7 +173,7 @@ function renderMemoryList(activeTab) {
             day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' 
         });
         
-        const displayTitle = r.title ? DOMPurify.sanitize(r.title) : `Message #${r.mesId}`;
+        const displayTitle = r.title ? DOMPurify.sanitize(r.title) : `ข้อความ #${r.mesId}`;
         const safeSnippet = DOMPurify.sanitize(r.snippet);
         const safeComment = r.comment ? DOMPurify.sanitize(r.comment) : '';
         const hasCommentHTML = r.comment ? `<div class="st-mm-item-comment-text"><i class="fa-solid fa-comment-dots"></i> ${safeComment}</div>` : '';
@@ -186,9 +186,9 @@ function renderMemoryList(activeTab) {
                         <span class="st-mm-item-date">${dateStr}</span>
                     </div>
                     <div class="st-mm-item-actions">
-                        <button class="st-mm-action-btn st-mm-edit-btn" data-id="${r.id}" title="Edit Title"><i class="fa-solid fa-pencil"></i></button>
-                        <button class="st-mm-action-btn st-mm-warp-btn" data-mesid="${r.mesId}" title="Jump to Message"><i class="fa-solid fa-location-arrow"></i></button>
-                        <button class="st-mm-action-btn st-mm-delete-btn" data-id="${r.id}" data-mesid="${r.mesId}" title="Delete"><i class="fa-solid fa-trash-can"></i></button>
+                        <button class="st-mm-action-btn st-mm-edit-btn" data-id="${r.id}" title="แก้ไขหัวข้อ"><i class="fa-solid fa-pencil"></i></button>
+                        <button class="st-mm-action-btn st-mm-warp-btn" data-mesid="${r.mesId}" title="ไปยังข้อความ"><i class="fa-solid fa-location-arrow"></i></button>
+                        <button class="st-mm-action-btn st-mm-delete-btn" data-id="${r.id}" data-mesid="${r.mesId}" title="ลบ"><i class="fa-solid fa-trash-can"></i></button>
                     </div>
                 </div>
                 <div class="st-mm-item-snippet">"${safeSnippet}"</div>
@@ -258,7 +258,7 @@ function attachModalListeners() {
         const title = $('#st-mm-comment-title').val().trim();
         
         if (!detail) {
-            toastr.warning("Please enter comment details.");
+            toastr.warning("กรุณากรอกข้อความความคิดเห็น");
             return;
         }
 
@@ -271,7 +271,7 @@ function attachModalListeners() {
         saveStorage();
         updateSingleButtonUI(mesId);
         $('#st-mm-comment-modal').fadeOut(250);
-        toastr.success("Comment saved successfully.");
+        toastr.success("บันทึกความคิดเห็นเรียบร้อยแล้ว");
     });
 
     $('#st-mm-close-main').on('click', function() {
@@ -289,7 +289,7 @@ function attachModalListeners() {
         const record = memoryData[id];
         if (!record) return;
 
-        const newTitle = await context.Popup.show.input("Enter new title:", record.title);
+        const newTitle = await context.Popup.show.input("ป้อนหัวข้อใหม่:", record.title);
         if (newTitle !== null) {
             record.title = newTitle;
             saveStorage();
@@ -307,7 +307,7 @@ function attachModalListeners() {
             target.addClass('ios-blink');
             setTimeout(() => target.removeClass('ios-blink'), 2000);
         } else {
-            toastr.warning("Message not found or out of current DOM view range.");
+            toastr.warning("ไม่พบข้อความนี้ในมุมมองปัจจุบัน");
         }
     });
 
@@ -315,13 +315,13 @@ function attachModalListeners() {
         const id = $(this).data('id');
         const mesId = $(this).data('mesid');
         
-        const confirmStr = await context.Popup.show.confirm("Delete Memory", "Are you sure you want to remove this record?");
+        const confirmStr = await context.Popup.show.confirm("ลบความทรงจำ", "คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?");
         if (confirmStr) {
             delete memoryData[id];
             saveStorage();
             renderMemoryList($('.st-mm-tab.active').data('tab'));
             updateSingleButtonUI(mesId);
-            toastr.success("Record deleted.");
+            toastr.success("ลบรายการเรียบร้อยแล้ว");
         }
     });
 }

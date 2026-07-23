@@ -1,55 +1,25 @@
-/* --- ส่วนปุ่มรีแอคชันท้ายข้อความ --- */
-.msg-reaction-container {
-    opacity: 0.7;
-    transition: opacity 0.2s ease-in-out;
-}
+/* --- ปุ่มท้ายข้อความ --- */
+.msg-reaction-container { opacity: 0.7; transition: opacity 0.2s ease-in-out; }
+.mes:hover .msg-reaction-container { opacity: 1; }
+.reaction-btn { cursor: pointer; padding: 6px; border-radius: 50%; background: rgba(0, 0, 0, 0.05); color: var(--SmartThemeBodyColor); transition: all 0.2s; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; }
+.active-heart { color: #ff4b4b !important; text-shadow: 0 0 5px rgba(255, 75, 75, 0.5); }
+.view-fav-btn { color: var(--SmartThemeQuoteColor); }
+.comment-btn { color: #4CAF50; } /* คืนชีพปุ่มคอมเมนต์ */
 
-.mes:hover .msg-reaction-container {
-    opacity: 1;
-}
+@keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.4); } 100% { transform: scale(1); } }
+.pop-anim { animation: pop 0.3s ease-out; }
 
-.reaction-btn {
-    cursor: pointer;
-    padding: 6px;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.05);
-    color: var(--SmartThemeBodyColor);
-    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-}
-
-.active-heart {
-    color: #ff4b4b !important;
-    text-shadow: 0 0 5px rgba(255, 75, 75, 0.5);
-}
-
-.view-fav-btn {
-    color: var(--SmartThemeQuoteColor);
-}
-
-@keyframes pop {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.4); }
-    100% { transform: scale(1); }
-}
-
-.pop-anim {
-    animation: pop 0.3s ease-out;
-}
-
-/* --- แก้ไขหน้าต่างรายการโปรด (กันทะลุขอบ & มีระบบแท็บ) --- */
+/* --- หน้าต่างรายการโปรด (Responsive 100%) --- */
 #mr-modal {
     position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 90%;
-    max-width: 450px;
-    max-height: 80vh; /* บังคับความสูงไม่ให้เกิน 80% ของหน้าจอ */
+    /* เปลี่ยนจากจัดกึ่งกลางด้วย 50% เป็นการใช้ขอบที่แน่นอน */
+    top: 5vh; /* ห่างจากขอบบน 5% ของหน้าจอเสมอ */
+    bottom: 5vh; /* ห่างจากขอบล่าง 5% */
+    left: 5vw; /* ห่างซ้าย 5% */
+    right: 5vw; /* ห่างขวา 5% */
+    width: auto;
+    max-width: 500px;
+    margin: 0 auto; /* จัดกึ่งกลางสำหรับจอใหญ่ */
     background: var(--SmartThemeBlurTintColor);
     backdrop-filter: blur(10px);
     border: 1px solid var(--SmartThemeBorderColor);
@@ -58,7 +28,7 @@
     display: none;
     flex-direction: column;
     box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-    overflow: hidden; /* ไม่ให้เนื้อหาล้นกรอบ */
+    overflow: hidden;
 }
 
 #mr-modal-header {
@@ -68,112 +38,40 @@
     justify-content: space-between;
     align-items: center;
     font-weight: bold;
-    background: rgba(0,0,0,0.1);
+    background: rgba(0,0,0,0.2);
 }
 
-#mr-close-btn {
-    cursor: pointer;
-    color: #ff4b4b;
-    font-size: 1.2em;
-}
+#mr-close-btn { cursor: pointer; color: #ff4b4b; font-size: 1.5em; padding: 5px; }
 
 /* ระบบแท็บ */
-.mr-tabs {
-    display: flex;
-    border-bottom: 1px solid var(--SmartThemeBorderColor);
-}
-
-.mr-tab-btn {
-    flex: 1;
-    padding: 10px;
-    text-align: center;
-    cursor: pointer;
-    opacity: 0.5;
-    transition: all 0.2s;
-}
-
-.mr-tab-btn.active {
-    opacity: 1;
-    border-bottom: 2px solid #ff4b4b;
-    font-weight: bold;
-    background: rgba(255, 255, 255, 0.05);
-}
+.mr-tabs { display: flex; border-bottom: 1px solid var(--SmartThemeBorderColor); }
+.mr-tab-btn { flex: 1; padding: 12px; text-align: center; cursor: pointer; opacity: 0.5; transition: all 0.2s; }
+.mr-tab-btn.active { opacity: 1; border-bottom: 3px solid #ff4b4b; font-weight: bold; background: rgba(255, 255, 255, 0.05); }
 
 #mr-modal-body {
     padding: 15px;
-    overflow-y: auto; /* เลื่อนไถดูเนื้อหาได้ */
+    overflow-y: auto;
     flex-grow: 1;
+    /* เผื่อที่ว่างด้านล่างกันโดนบัง */
+    padding-bottom: 30px;
 }
 
-.mr-fav-item {
-    background: rgba(0,0,0,0.2);
-    padding: 10px;
-    border-radius: 8px;
-    margin-bottom: 10px;
-    position: relative;
-}
+.mr-fav-item { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px; position: relative; border: 1px solid transparent; }
+.mr-fav-item:hover { border-color: var(--SmartThemeQuoteColor); }
 
-.mr-item-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 5px;
-}
+.mr-item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.mr-fav-header { font-size: 0.8em; opacity: 0.7; }
 
-.mr-fav-header {
-    font-size: 0.8em;
-    opacity: 0.7;
-}
+/* ปุ่มจัดการ (ดินสอ, วาร์ป, ลบ) */
+.mr-item-actions { display: flex; gap: 12px; opacity: 0.7; }
+.mr-item-actions i { cursor: pointer; transition: color 0.2s; font-size: 1.1em; }
+.mr-edit-title-icon:hover { color: #4CAF50; }
+.mr-warp-btn:hover { color: #2196F3; }
+.mr-delete-btn:hover { color: #ff4b4b; }
 
-/* ไอคอนดินสอ */
-.mr-item-actions {
-    display: flex;
-    gap: 10px;
-    opacity: 0.5;
-}
+.mr-custom-title { font-weight: bold; color: var(--SmartThemeQuoteColor); margin-bottom: 5px; display: block; font-size: 1.1em; }
+.mr-title-edit-container { display: none; margin-bottom: 5px; align-items: center; gap: 5px; }
+.mr-fav-title-input { flex-grow: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--SmartThemeBorderColor); color: var(--SmartThemeBodyColor); padding: 8px; border-radius: 4px; outline: none; }
+.mr-save-title-btn { cursor: pointer; color: #4CAF50; padding: 5px; font-size: 1.2em; }
 
-.mr-item-actions i {
-    cursor: pointer;
-    transition: opacity 0.2s;
-}
-
-.mr-item-actions i:hover {
-    opacity: 1;
-    color: var(--SmartThemeQuoteColor);
-}
-
-.mr-custom-title {
-    font-weight: bold;
-    color: var(--SmartThemeQuoteColor);
-    margin-bottom: 5px;
-    display: block;
-}
-
-.mr-title-edit-container {
-    display: none; /* ซ่อนช่องพิมพ์ไว้ตอนแรก */
-    margin-bottom: 5px;
-    align-items: center;
-}
-
-.mr-fav-title-input {
-    flex-grow: 1;
-    background: rgba(0,0,0,0.3);
-    border: 1px solid var(--SmartThemeBorderColor);
-    color: var(--SmartThemeBodyColor);
-    padding: 5px;
-    border-radius: 4px;
-    outline: none;
-}
-
-.mr-save-title-btn {
-    cursor: pointer;
-    color: #4CAF50;
-    margin-left: 8px;
-    padding: 5px;
-}
-
-.mr-fav-snippet {
-    font-size: 0.9em;
-    font-style: italic;
-    opacity: 0.8;
-}
+.mr-fav-snippet { font-size: 0.9em; font-style: italic; opacity: 0.8; padding-top: 5px; border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; }

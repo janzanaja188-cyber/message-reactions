@@ -1,310 +1,356 @@
-import { getContext } from "../../../extensions.js";
-import { eventSource, event_types } from "../../../../script.js";
+// path: public/scripts/extensions/third-party/st-message-memory/index.js
 
-const extensionName = "message-reactions";
-let reactionsDB = {};
-let currentTab = 'likes';
-let activeCommentKey = null;
-let activeCommentMesId = null;
+const MODULE_NAME = "stMessageMemory";
+let memoryData = {};
 
-// ==========================================
-// 1. ระบบฐานข้อมูล
-// ==========================================
-function loadReactions() {
-    const saved = localStorage.getItem(`${extensionName}_db`);
-    if (saved) reactionsDB = JSON.parse(saved);
-}
-
-function saveReactions() {
-    localStorage.setItem(`${extensionName}_db`, JSON.stringify(reactionsDB));
-}
-
-// ==========================================
-// 2. สร้าง UI ลงในหน้าเว็บ
-// ==========================================
-function injectUI() {
-    if (document.getElementById('mr-extension-container') === null) {
-        const uiContainer = document.createElement('div');
-        uiContainer.id = "mr-extension-container";
-        uiContainer.innerHTML = `
-            <!-- Main Modal -->
-            <div id="mr-modal" style="display: none;">
-                <div id="mr-modal-header">
-                    <span>รายการที่บันทึกไว้</span>
-                    <i id="mr-close-btn" class="fa-solid fa-xmark" title="ปิด"></i>
-                </div>
-                <div class="mr-tabs">
-                    <div class="mr-tab-btn active" data-tab="likes"><i class="fa-solid fa-heart"></i> ที่กดใจ</div>
-                    <div class="mr-tab-btn" data-tab="comments"><i class="fa-solid fa-comment"></i> คอมเมนต์</div>
-                </div>
-                <div id="mr-modal-body"></div>
-            </div>
-
-            <!-- Comment Popup -->
-            <div id="mr-comment-modal" style="display: none;">
-                <div id="mr-comment-header">เขียนคอมเมนต์</div>
-                <div id="mr-comment-body">
-                    <input type="text" id="mr-input-comment-title" class="mr-comment-input-title" placeholder="หัวข้อ (ไม่ใส่ก็ได้)">
-                    <textarea id="mr-input-comment-detail" class="mr-comment-input-detail" placeholder="รายละเอียดคอมเมนต์..."></textarea>
-                </div>
-                <div id="mr-comment-footer">
-                    <div class="mr-btn-cancel" id="mr-cancel-comment">ยกเลิก</div>
-                    <div class="mr-btn-save" id="mr-save-comment">บันทึก</div>
-                </div>
-            </div>
-        `;
-
-        const targetContainer = document.getElementById('bg_layer') || document.body;
-        targetContainer.appendChild(uiContainer);
-
-        // --- Event ของ Main Modal ---
-        $(document).on('click', '#mr-close-btn', () => $('#mr-modal').hide());
-
-        $(document).on('click', '.mr-tab-btn', function() {
-            $('.mr-tab-btn').removeClass('active');
-            $(this).addClass('active');
-            currentTab = $(this).attr('data-tab');
-            renderModal();
-        });
-
-        $(document).on('click', '.mr-edit-title-icon', function() {
-            const container = $(this).closest('.mr-fav-item');
-            container.find('.mr-custom-title').hide();
-            container.find('.mr-title-edit-container').css('display', 'flex');
-        });
-
-        $(document).on('click', '.mr-save-title-btn', function() {
-            const container = $(this).closest('.mr-fav-item');
-            const key = $(this).attr('data-key');
-            if(reactionsDB[key]) {
-                reactionsDB[key].customTitle = container.find('.mr-fav-title-input').val();
-                saveReactions();
-            }
-            renderModal();
-        });
-
-        $(document).on('click', '.mr-warp-btn', function() {
-            const mesId = $(this).attr('data-mesid');
-            const targetElement = $(`.mes[mesid="${mesId}"]`);
-            if (targetElement.length > 0) {
-                $('#mr-modal').hide();
-                targetElement[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-                targetElement.css('transition', 'background 0.5s').css('background', 'rgba(255, 75, 75, 0.2)');
-                setTimeout(() => targetElement.css('background', ''), 1000);
-            } else {
-                alert("ไม่พบข้อความนี้ในหน้าจอ");
-            }
-        });
-
-        $(document).on('click', '.mr-delete-btn', function() {
-            if(confirm("แน่ใจนะว่าจะลบรายการนี้?")) {
-                const key = $(this).attr('data-key');
-                const mesId = reactionsDB[key].mesIndex;
-
-                if(reactionsDB[key].is_favorited) {
-                    $(`.heart-btn[data-mesid="${mesId}"] i`).removeClass('fa-solid active-heart').addClass('fa-regular');
-                }
-
-                delete reactionsDB[key];
-                saveReactions();
-                renderModal();
-            }
-        });
-
-        // --- Event ของ Comment Popup ---
-        $(document).on('click', '#mr-cancel-comment', function() {
-            $('#mr-comment-modal').hide();
-            activeCommentKey = null;
-            activeCommentMesId = null;
-        });
-
-        $(document).on('click', '#mr-save-comment', function() {
-            const title = $('#mr-input-comment-title').val();
-            const detail = $('#mr-input-comment-detail').val();
-
-            if (!detail.trim()) {
-                alert("กรุณาใส่รายละเอียดคอมเมนต์");
-                return;
-            }
-
-            const chatData = getContext().chat[activeCommentMesId];
-            if(!chatData) return;
-            const snippet = chatData.mes.replace(/<[^>]*>?/gm, '').substring(0, 50) + "...";
-
-            if (!reactionsDB[activeCommentKey]) {
-                reactionsDB[activeCommentKey] = { key: activeCommentKey, mesIndex: activeCommentMesId, snippet: snippet, saveTime: Date.now(), customTitle: "", is_favorited: false, comment_title: "", comment_detail: "" };
-            }
-
-            reactionsDB[activeCommentKey].comment_title = title;
-            reactionsDB[activeCommentKey].comment_detail = detail;
-            reactionsDB[activeCommentKey].has_comment = true;
-            reactionsDB[activeCommentKey].saveTime = Date.now();
-
-            saveReactions();
-            $('#mr-comment-modal').hide();
-
-            if ($('#mr-modal').is(':visible') && currentTab === 'comments') renderModal();
-        });
+/**
+ * 1. Initialization & Storage
+ */
+function initStorage() {
+    const context = SillyTavern.getContext();
+    if (!context.extensionSettings[MODULE_NAME]) {
+        context.extensionSettings[MODULE_NAME] = {};
     }
+    memoryData = context.extensionSettings[MODULE_NAME];
 }
 
-// ==========================================
-// 3. วาดข้อมูลลงในหน้าต่าง
-// ==========================================
-function renderModal() {
-    const context = getContext();
-    const charId = context.characterId;
-    const body = $('#mr-modal-body');
-    body.empty();
+function saveStorage() {
+    SillyTavern.getContext().saveSettingsDebounced();
+}
 
-    let items = [];
-    if (currentTab === 'likes') {
-        items = Object.keys(reactionsDB).filter(k => k.startsWith(charId + '_') && reactionsDB[k] && reactionsDB[k].is_favorited === true).map(k => reactionsDB[k]);
-    } else if (currentTab === 'comments') {
-        items = Object.keys(reactionsDB).filter(k => k.startsWith(charId + '_') && reactionsDB[k] && reactionsDB[k].has_comment === true).map(k => reactionsDB[k]);
+// สร้าง Unique ID จากตัวละคร + Chat + Message ID
+function getRecordId(mesId) {
+    const context = SillyTavern.getContext();
+    const charId = context.characterId || 'group';
+    const chatId = context.chatId || 'no_chat';
+    return `${charId}_${chatId}_${mesId}`;
+}
+
+// สร้าง Record ใหม่
+function createNewRecord(mesId) {
+    const context = SillyTavern.getContext();
+    const chat = context.chat;
+    const mes = chat[mesId];
+    
+    // สร้าง Snippet โดยลบ HTML tags ออกเพื่อความสะอาด
+    let snippet = mes.mes.replace(/<[^>]*>?/gm, '').trim();
+    snippet = snippet.length > 80 ? snippet.substring(0, 80) + '...' : snippet;
+
+    return {
+        id: getRecordId(mesId),
+        mesId: mesId,
+        chatId: context.chatId || 'no_chat',
+        charId: context.characterId || 'group',
+        timestamp: Date.now(),
+        snippet: snippet,
+        isHeart: false,
+        title: "",
+        comment: ""
+    };
+}
+
+/**
+ * 2. DOM Injection (แทรกปุ่ม)
+ */
+function injectButtons(mesId) {
+    const context = SillyTavern.getContext();
+    const chat = context.chat;
+    
+    if (!chat || !chat[mesId]) return;
+    const mes = chat[mesId];
+
+    // ข้อกำหนด: แทรกเฉพาะข้อความของ NPC ห้ามแทรกข้อความ User หรือ System
+    if (mes.is_user || mes.is_system) return;
+
+    // หา DOM Block
+    const mesBlock = document.querySelector(`.mes[mesid="${mesId}"] .mes_block`);
+    if (!mesBlock) return;
+
+    // ถ้ามีปุ่มอยู่แล้ว ไม่ต้องแทรกซ้ำ
+    if (mesBlock.querySelector('.st-mm-button-container')) {
+        updateSingleButtonUI(mesId);
+        return;
     }
 
-    if (!items || items.length === 0) {
-        body.append('<p style="text-align:center; opacity:0.5; margin-top: 20px;">ยังไม่มีข้อมูล</p>');
-    } else {
-        items.sort((a,b) => b.saveTime - a.saveTime).forEach(item => {
-            try {
-                const saveTimeValue = item.saveTime || Date.now();
-                const dateStr = new Date(saveTimeValue).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const container = document.createElement('div');
+    container.className = 'st-mm-button-container';
 
-                let contentDisplay = '';
-                if (currentTab === 'likes') {
-                    contentDisplay = item.customTitle ? `<span class="mr-custom-title">${item.customTitle}</span>` : '';
-                } else {
-                    const cTitle = item.comment_title ? `<span class="mr-custom-title">หัวข้อ: ${item.comment_title}</span>` : '';
-                    contentDisplay = `${cTitle}<div style="margin-bottom: 10px; color: #4CAF50;">${item.comment_detail}</div>`;
-                }
-
-                const snippetText = item.snippet || "ไม่สามารถแสดงข้อความได้";
-
-                const html = `
-                    <div class="mr-fav-item" data-key="${item.key}" data-mesid="${item.mesIndex}">
-                        <div class="mr-item-top">
-                            <div class="mr-fav-header">ข้อความที่ ${item.mesIndex} • ${dateStr}</div>
-                            <div class="mr-item-actions">
-                                <i class="fa-solid fa-rocket mr-warp-btn" data-mesid="${item.mesIndex}" title="วาร์ปไปข้อความนี้"></i>
-                                ${currentTab === 'likes' ? `<i class="fa-solid fa-pencil mr-edit-title-icon" title="แก้ไขชื่อ"></i>` : ''}
-                                <i class="fa-solid fa-trash-can mr-delete-btn" data-key="${item.key}" title="ลบ"></i>
-                            </div>
-                        </div>
-                        ${contentDisplay}
-                        <div class="mr-title-edit-container">
-                            <input type="text" class="mr-fav-title-input" value="${item.customTitle || ''}" placeholder="ตั้งชื่อความทรงจำ...">
-                            <i class="fa-solid fa-check mr-save-title-btn" data-key="${item.key}"></i>
-                        </div>
-                        <div class="mr-fav-snippet">"${snippetText}"</div>
-                    </div>
-                `;
-                body.append(html);
-            } catch (err) {
-                console.error("[Message Reactions] Error rendering item:", err);
-            }
-        });
-    }
-}
-
-// ==========================================
-// 4. แทรกปุ่มลงในแชท
-// ==========================================
-function processMessage(mesId) {
-    const context = getContext();
-    const chatData = context.chat;
-    if (!chatData || !chatData[mesId] || chatData[mesId].is_user) return;
-
-    const msgElement = $(`.mes[mesid="${mesId}"]`);
-    if (msgElement.find('.msg-reaction-container').length > 0) return;
-
-    const uniqueKey = `${context.characterId || "unknown"}_${mesId}`;
-    const isFavorited = reactionsDB[uniqueKey]?.is_favorited || false;
-    const heartClass = isFavorited ? 'fa-solid active-heart' : 'fa-regular';
-
-    const btnHtml = `
-        <div class="msg-reaction-container" style="display: flex; gap: 8px; margin-top: 5px; padding-left: 10px;">
-            <div class="reaction-btn heart-btn" title="Like" data-key="${uniqueKey}" data-mesid="${mesId}">
-                <i class="fa-heart ${heartClass}"></i>
-            </div>
-            <div class="reaction-btn comment-btn" title="Comment" data-key="${uniqueKey}" data-mesid="${mesId}">
-                <i class="fa-solid fa-comment"></i>
-            </div>
-            <div class="reaction-btn view-fav-btn" title="ดูรายการที่บันทึกไว้">
-                <i class="fa-solid fa-book-bookmark"></i>
-            </div>
+    container.innerHTML = `
+        <div class="st-mm-btn st-mm-heart" data-mesid="${mesId}" title="ถูกใจ">
+            <i class="fa-solid fa-heart"></i>
+        </div>
+        <div class="st-mm-btn st-mm-comment" data-mesid="${mesId}" title="คอมเมนต์">
+            <i class="fa-solid fa-comment"></i>
+        </div>
+        <div class="st-mm-btn st-mm-book" data-mesid="${mesId}" title="สมุดความจำ">
+            <i class="fa-solid fa-book"></i>
         </div>
     `;
-    msgElement.find('.mes_text').after(btnHtml);
+
+    // แทรกต่อท้ายกล่องข้อความ
+    const mesText = mesBlock.querySelector('.mes_text');
+    if (mesText) {
+        mesText.insertAdjacentElement('afterend', container);
+    } else {
+        mesBlock.appendChild(container);
+    }
+
+    // อัปเดตสถานะสีปุ่ม
+    updateSingleButtonUI(mesId);
 }
 
-function processAllMessages() {
-    const context = getContext();
+function injectAllMessages() {
+    const context = SillyTavern.getContext();
     if (!context.chat) return;
-    for (let i = 0; i < context.chat.length; i++) processMessage(i);
+    context.chat.forEach((mes, index) => {
+        injectButtons(index);
+    });
 }
 
-// ==========================================
-// 5. ผูก Event ทั้งหมด (Initialization)
-// ==========================================
-jQuery(async () => {
-    console.log(`[${extensionName}] Loading... (Final Version - API Compliant)`);
-    loadReactions();
-    setTimeout(injectUI, 1000);
+function updateSingleButtonUI(mesId) {
+    const recordId = getRecordId(mesId);
+    const record = memoryData[recordId];
+    const heartBtn = document.querySelector(`.st-mm-heart[data-mesid="${mesId}"]`);
+    const commentBtn = document.querySelector(`.st-mm-comment[data-mesid="${mesId}"]`);
+    
+    if (heartBtn) {
+        if (record && record.isHeart) heartBtn.classList.add('active-heart');
+        else heartBtn.classList.remove('active-heart');
+    }
+    
+    if (commentBtn) {
+        if (record && record.comment) commentBtn.classList.add('active-comment');
+        else commentBtn.classList.remove('active-comment');
+    }
+}
 
-    eventSource.on(event_types.CHAT_CHANGED, processAllMessages);
-    eventSource.on(event_types.MESSAGE_RECEIVED, (mesId) => setTimeout(() => processMessage(mesId), 100));
-    eventSource.on(event_types.MESSAGE_UPDATED, (mesId) => setTimeout(() => processMessage(mesId), 100));
+/**
+ * 3. Modal Logic & Rendering
+ */
+async function loadModals() {
+    const context = SillyTavern.getContext();
+    // โหลด Template ที่เราสร้างไว้มาต่อท้าย body
+    const mainModalHtml = await context.renderExtensionTemplateAsync('third-party/st-message-memory', 'main-modal', {});
+    const commentModalHtml = await context.renderExtensionTemplateAsync('third-party/st-message-memory', 'comment-modal', {});
+    
+    $('body').append(mainModalHtml);
+    $('body').append(commentModalHtml);
 
-    $(document).on('click', '.heart-btn', function() {
-        const icon = $(this).find('i');
-        const uniqueKey = $(this).attr('data-key');
-        const mesId = $(this).attr('data-mesid');
-        const chatData = getContext().chat[mesId];
-        if(!chatData || !chatData.mes) return;
+    attachModalListeners();
+}
 
-        const snippet = chatData.mes.replace(/<[^>]*>?/gm, '').substring(0, 50) + "...";
+function renderMemoryList(activeTab) {
+    const context = SillyTavern.getContext();
+    const currentChatId = context.chatId || 'no_chat';
+    const container = $('#st-mm-list-container');
+    container.empty();
 
-        if (!reactionsDB[uniqueKey]) {
-            reactionsDB[uniqueKey] = { key: uniqueKey, mesIndex: mesId, snippet: snippet, saveTime: Date.now(), customTitle: "", has_comment: false };
+    // ดึงข้อมูลเฉพาะแชทปัจจุบัน
+    const records = Object.values(memoryData).filter(r => r.chatId === currentChatId);
+    
+    // กรองตาม Tab
+    const filtered = records.filter(r => {
+        if (activeTab === 'hearts') return r.isHeart;
+        if (activeTab === 'comments') return r.comment && r.comment.trim() !== "";
+        return false;
+    });
+
+    if (filtered.length === 0) {
+        container.append(`<div class="st-mm-empty">ไม่มีรายการในหมวดหมู่นี้</div>`);
+        return;
+    }
+
+    // เรียงจากใหม่ไปเก่า
+    filtered.sort((a, b) => b.timestamp - a.timestamp);
+
+    filtered.forEach(r => {
+        const dateStr = new Date(r.timestamp).toLocaleString('th-TH', { 
+            day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' 
+        });
+        
+        const displayTitle = r.title ? DOMPurify.sanitize(r.title) : `ข้อความที่ ${r.mesId}`;
+        const safeSnippet = DOMPurify.sanitize(r.snippet);
+        const safeComment = r.comment ? DOMPurify.sanitize(r.comment) : '';
+        const hasCommentHTML = r.comment ? `<div class="st-mm-item-comment-text">💬 ${safeComment}</div>` : '';
+
+        const itemHtml = `
+            <div class="st-mm-list-item">
+                <div class="st-mm-item-header">
+                    <div class="st-mm-item-title-group">
+                        <span class="st-mm-item-title">${displayTitle}</span>
+                        <span class="st-mm-item-date">${dateStr}</span>
+                    </div>
+                    <div class="st-mm-item-actions">
+                        <button class="st-mm-action-btn st-mm-edit-btn" data-id="${r.id}" title="แก้ไขหัวข้อ"><i class="fa-solid fa-pencil"></i></button>
+                        <button class="st-mm-action-btn st-mm-warp-btn" data-mesid="${r.mesId}" title="ไปที่ข้อความ"><i class="fa-solid fa-rocket"></i></button>
+                        <button class="st-mm-action-btn st-mm-delete-btn" data-id="${r.id}" data-mesid="${r.mesId}" title="ลบรายการ"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+                <div class="st-mm-item-snippet">"${safeSnippet}"</div>
+                ${activeTab === 'comments' ? hasCommentHTML : ''}
+            </div>
+        `;
+        container.append(itemHtml);
+    });
+}
+
+/**
+ * 4. Event Listeners
+ */
+function attachModalListeners() {
+    const context = SillyTavern.getContext();
+
+    // -- Chat Screen Buttons --
+    $('#chat').on('click', '.st-mm-heart', function() {
+        const mesId = $(this).data('mesid');
+        const recordId = getRecordId(mesId);
+        
+        if (!memoryData[recordId]) {
+            memoryData[recordId] = createNewRecord(mesId);
         }
+        
+        const record = memoryData[recordId];
+        record.isHeart = !record.isHeart; 
+        
+        // ถ้าเอาหัวใจออกและไม่มีคอมเมนต์ ลบทิ้งเพื่อประหยัดพื้นที่
+        if (!record.isHeart && !record.comment) {
+            delete memoryData[recordId];
+        }
+        
+        saveStorage();
+        updateSingleButtonUI(mesId);
+    });
 
-        if (icon.hasClass('fa-regular')) {
-            icon.removeClass('fa-regular').addClass('fa-solid active-heart');
-            $(this).addClass('pop-anim');
-            setTimeout(() => $(this).removeClass('pop-anim'), 300);
-            reactionsDB[uniqueKey].is_favorited = true;
-            reactionsDB[uniqueKey].saveTime = Date.now();
+    $('#chat').on('click', '.st-mm-comment', function() {
+        const mesId = $(this).data('mesid');
+        const recordId = getRecordId(mesId);
+        
+        $('#st-mm-comment-mesid').val(mesId);
+        if (memoryData[recordId]) {
+            $('#st-mm-comment-title').val(memoryData[recordId].title || "");
+            $('#st-mm-comment-detail').val(memoryData[recordId].comment || "");
         } else {
-            icon.removeClass('fa-solid active-heart').addClass('fa-regular');
-            reactionsDB[uniqueKey].is_favorited = false;
+            $('#st-mm-comment-title').val("");
+            $('#st-mm-comment-detail').val("");
         }
-
-        saveReactions();
-        if ($('#mr-modal').is(':visible') && currentTab === 'likes') renderModal();
+        
+        $('#st-mm-comment-modal').fadeIn(200);
     });
 
-    $(document).on('click', '.comment-btn', function() {
-        activeCommentKey = $(this).attr('data-key');
-        activeCommentMesId = $(this).attr('data-mesid');
-
-        $('#mr-input-comment-title').val('');
-        $('#mr-input-comment-detail').val('');
-
-        if(reactionsDB[activeCommentKey] && reactionsDB[activeCommentKey].has_comment) {
-            $('#mr-input-comment-title').val(reactionsDB[activeCommentKey].comment_title || '');
-            $('#mr-input-comment-detail').val(reactionsDB[activeCommentKey].comment_detail || '');
-        }
-
-        $('#mr-comment-modal').css('display', 'flex');
+    $('#chat').on('click', '.st-mm-book', function() {
+        $('.st-mm-tab').removeClass('active');
+        $('.st-mm-tab[data-tab="hearts"]').addClass('active');
+        renderMemoryList('hearts');
+        $('#st-mm-main-modal').fadeIn(200);
     });
 
-    $(document).on('click', '.view-fav-btn', function() {
-        currentTab = 'likes';
-        $('.mr-tab-btn').removeClass('active');
-        $('.mr-tab-btn[data-tab="likes"]').addClass('active');
-        $('#mr-modal').css('display', 'flex');
-        renderModal();
+    // -- Comment Modal --
+    $('#st-mm-close-comment, #st-mm-comment-cancel').on('click', function() {
+        $('#st-mm-comment-modal').fadeOut(200);
+    });
+
+    $('#st-mm-comment-save').on('click', function() {
+        const mesId = $('#st-mm-comment-mesid').val();
+        const detail = $('#st-mm-comment-detail').val().trim();
+        const title = $('#st-mm-comment-title').val().trim();
+        
+        if (!detail) {
+            toastr.warning("กรุณากรอกรายละเอียดคอมเมนต์");
+            return;
+        }
+
+        const recordId = getRecordId(mesId);
+        if (!memoryData[recordId]) {
+            memoryData[recordId] = createNewRecord(mesId);
+        }
+        
+        memoryData[recordId].comment = detail;
+        memoryData[recordId].title = title;
+        
+        saveStorage();
+        updateSingleButtonUI(mesId);
+        $('#st-mm-comment-modal').fadeOut(200);
+        toastr.success("บันทึกคอมเมนต์สำเร็จ");
+    });
+
+    // -- Main Modal --
+    $('#st-mm-close-main').on('click', function() {
+        $('#st-mm-main-modal').fadeOut(200);
+    });
+
+    $('.st-mm-tab').on('click', function() {
+        $('.st-mm-tab').removeClass('active');
+        $(this).addClass('active');
+        renderMemoryList($(this).data('tab'));
+    });
+
+    $('#st-mm-list-container').on('click', '.st-mm-edit-btn', async function() {
+        const id = $(this).data('id');
+        const record = memoryData[id];
+        if (!record) return;
+
+        const newTitle = await context.Popup.show.input("ตั้งชื่อหัวข้อความทรงจำ:", record.title);
+        if (newTitle !== null) {
+            record.title = newTitle;
+            saveStorage();
+            renderMemoryList($('.st-mm-tab.active').data('tab'));
+        }
+    });
+
+    $('#st-mm-list-container').on('click', '.st-mm-warp-btn', function() {
+        const mesId = $(this).data('mesid');
+        const target = $(`.mes[mesid="${mesId}"]`);
+        
+        if (target.length) {
+            $('#st-mm-main-modal').fadeOut(200);
+            target[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            const originalBg = target.css('backgroundColor');
+            target.css('backgroundColor', 'var(--SmartThemeQuoteColor)');
+            setTimeout(() => {
+                target.css('backgroundColor', originalBg);
+            }, 1500);
+        } else {
+            toastr.warning("โหลดข้อความไม่ถึง หรือข้อความถูกลบไปแล้ว");
+        }
+    });
+
+    $('#st-mm-list-container').on('click', '.st-mm-delete-btn', async function() {
+        const id = $(this).data('id');
+        const mesId = $(this).data('mesid');
+        
+        const confirmStr = await context.Popup.show.confirm("ยืนยันการลบ", "คุณต้องการลบรายการนี้ใช่หรือไม่?");
+        if (confirmStr) {
+            delete memoryData[id];
+            saveStorage();
+            renderMemoryList($('.st-mm-tab.active').data('tab'));
+            updateSingleButtonUI(mesId);
+            toastr.success("ลบรายการสำเร็จ");
+        }
+    });
+}
+
+/**
+ * 5. Lifecycle Hooks
+ */
+jQuery(async function () {
+    const context = SillyTavern.getContext();
+    
+    context.eventSource.on(context.event_types.APP_READY, async () => {
+        initStorage();
+        await loadModals();
+        injectAllMessages();
+    });
+
+    context.eventSource.on(context.event_types.CHAT_CHANGED, () => {
+        injectAllMessages();
+    });
+
+    context.eventSource.on(context.event_types.CHARACTER_MESSAGE_RENDERED, (mesId) => {
+        injectButtons(mesId);
+    });
+    
+    context.eventSource.on(context.event_types.MESSAGE_UPDATED, (mesId) => {
+        injectButtons(mesId);
     });
 });

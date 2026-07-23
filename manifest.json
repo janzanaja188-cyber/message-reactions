@@ -1,5 +1,4 @@
-// path: public/scripts/extensions/third-party/st-message-memory/manifest.json
-{
+}
     "display_name": "Message Reactions & Memory",
     "js": "index.js",
     "css": "style.css",

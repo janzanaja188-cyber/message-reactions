@@ -3,7 +3,6 @@ import { eventSource, event_types } from "../../../../script.js";
 
 const extensionName = "message-reactions";
 let reactionsDB = {};
-let currentAvatarUrl = "";
 
 function loadReactions() {
     const saved = localStorage.getItem(`${extensionName}_db`);
@@ -14,38 +13,12 @@ function saveReactions() {
     localStorage.setItem(`${extensionName}_db`, JSON.stringify(reactionsDB));
 }
 
-function updateFloatingBtn() {
-    const context = getContext();
-    if (!context.chatId) {
-        $('#mr-floating-btn').hide();
-        return;
-    }
-
-    $('#mr-floating-btn').show();
-
-    if (context.characterId && context.characters[context.characterId]) {
-        currentAvatarUrl = `/characters/${context.characters[context.characterId].avatar}`;
-        $('#mr-floating-btn').css('background-image', `url('${currentAvatarUrl}')`);
-    }
-
-    const charId = context.characterId;
-    let count = Object.keys(reactionsDB).filter(k => k.startsWith(charId + '_') && reactionsDB[k].is_favorited).length;
-
-    if (count > 0) {
-        $('#mr-badge').text(count).show();
-    } else {
-        $('#mr-badge').hide();
-    }
-}
-
+// สร้างแค่ Modal ซ่อนไว้
 function injectUI() {
-    if (document.getElementById('mr-floating-btn') === null) {
+    if (document.getElementById('mr-modal') === null) {
         const uiContainer = document.createElement('div');
         uiContainer.id = "mr-extension-container";
         uiContainer.innerHTML = `
-            <div id="mr-floating-btn" style="display: none;">
-                <div id="mr-badge" style="display: none;">0</div>
-            </div>
             <div id="mr-modal" style="display: none;">
                 <div id="mr-modal-header">
                     <span>รายการโปรด</span>
@@ -58,82 +31,15 @@ function injectUI() {
         const targetContainer = document.getElementById('bg_layer') || document.body;
         targetContainer.appendChild(uiContainer);
 
-        setupDraggable();
-
-        $(document).on('click', '#mr-floating-btn', function(e) {
-            if (!$(this).hasClass('is-dragging')) {
-                renderModal();
-            }
-        });
-
         $(document).on('click', '#mr-close-btn', function() {
             $('#mr-modal').hide();
         });
 
-        console.log(`[${extensionName}] UI Injected into ${targetContainer.id || 'body'}`);
+        console.log(`[${extensionName}] Modal Injected.`);
     }
 }
 
-function setupDraggable() {
-    const btn = document.getElementById('mr-floating-btn');
-    let isDragging = false;
-    let startX, startY, initialX, initialY;
-    let moved = false;
-
-    const startDrag = (e) => {
-        isDragging = true;
-        moved = false;
-        const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
-        const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
-        startX = clientX;
-        startY = clientY;
-        initialX = btn.offsetLeft;
-        initialY = btn.offsetTop;
-        btn.style.transition = 'none';
-    };
-
-    const doDrag = (e) => {
-        if (!isDragging) return;
-        const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
-        const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
-
-        const dx = clientX - startX;
-        const dy = clientY - startY;
-
-        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-            moved = true;
-            $(btn).addClass('is-dragging');
-        }
-
-        let newX = initialX + dx;
-        let newY = initialY + dy;
-
-        const maxX = window.innerWidth - btn.offsetWidth;
-        const maxY = window.innerHeight - btn.offsetHeight;
-        newX = Math.max(0, Math.min(newX, maxX));
-        newY = Math.max(0, Math.min(newY, maxY));
-
-        btn.style.left = newX + 'px';
-        btn.style.top = newY + 'px';
-        btn.style.right = 'auto';
-        btn.style.bottom = 'auto';
-    };
-
-    const stopDrag = (e) => {
-        isDragging = false;
-        btn.style.transition = 'all 0.2s';
-        setTimeout(() => $(btn).removeClass('is-dragging'), 50);
-    };
-
-    btn.addEventListener('mousedown', startDrag);
-    document.addEventListener('mousemove', doDrag);
-    document.addEventListener('mouseup', stopDrag);
-
-    btn.addEventListener('touchstart', startDrag, {passive: true});
-    document.addEventListener('touchmove', doDrag, {passive: false});
-    document.addEventListener('touchend', stopDrag);
-}
-
+// วาดรายการโปรด
 function renderModal() {
     const context = getContext();
     const charId = context.characterId;
@@ -168,6 +74,7 @@ function renderModal() {
     $('#mr-modal').css('display', 'flex');
 }
 
+// แทรกปุ่มหัวใจ + ปุ่มดูรายการโปรด
 function processMessage(mesId) {
     const context = getContext();
     const chatData = context.chat;
@@ -188,6 +95,9 @@ function processMessage(mesId) {
             <div class="reaction-btn heart-btn" title="Like" data-key="${uniqueKey}" data-mesid="${mesId}">
                 <i class="fa-heart ${heartClass}"></i>
             </div>
+            <div class="reaction-btn view-fav-btn" title="ดูรายการโปรด">
+                <i class="fa-solid fa-book-bookmark"></i>
+            </div>
         </div>
     `;
 
@@ -198,32 +108,30 @@ function processAllMessages() {
     const context = getContext();
     if (!context.chat) return;
     for (let i = 0; i < context.chat.length; i++) processMessage(i);
-    updateFloatingBtn();
 }
 
 jQuery(async () => {
-    console.log(`[${extensionName}] Loading... (Final Version)`);
+    console.log(`[${extensionName}] Loading... (Inline Button Mode)`);
 
     loadReactions();
 
     setTimeout(() => {
         injectUI();
-        updateFloatingBtn();
     }, 1000);
 
     eventSource.on(event_types.CHAT_CHANGED, () => {
         processAllMessages();
-        setTimeout(updateFloatingBtn, 500);
     });
 
     eventSource.on(event_types.MESSAGE_RECEIVED, (mesId) => {
-        setTimeout(() => { processMessage(mesId); updateFloatingBtn(); }, 100);
+        setTimeout(() => { processMessage(mesId); }, 100);
     });
 
     eventSource.on(event_types.MESSAGE_UPDATED, (mesId) => {
         setTimeout(() => processMessage(mesId), 100);
     });
 
+    // กดหัวใจ
     $(document).on('click', '.heart-btn', function() {
         const icon = $(this).find('i');
         const uniqueKey = $(this).attr('data-key');
@@ -254,6 +162,10 @@ jQuery(async () => {
         }
 
         saveReactions();
-        updateFloatingBtn();
+    });
+
+    // กดปุ่มดูรายการโปรด (ปุ่มใหม่ข้างๆ หัวใจ)
+    $(document).on('click', '.view-fav-btn', function() {
+        renderModal();
     });
 });

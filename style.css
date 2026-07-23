@@ -2,17 +2,20 @@
 
 .st-mm-button-container {
     display: flex;
-    justify-content: flex-end;
-    gap: 6px;
-    margin-top: 6px;
-    padding: 0 10px;
+    justify-content: center; /* เปลี่ยนจากชิดขวาเป็นจัดกึ่งกลางข้อความ */
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    margin-bottom: 5px;
+    padding: 4px 10px;
+    width: 100%;
 }
 
 .st-mm-btn {
-    background: var(--SmartThemeBlurTintColor, rgba(128, 128, 128, 0.1));
-    border: 1px solid var(--SmartThemeBorderColor, rgba(128, 128, 128, 0.2));
+    background: var(--SmartThemeBlurTintColor, rgba(128, 128, 128, 0.12));
+    border: 1px solid var(--SmartThemeBorderColor, rgba(128, 128, 128, 0.25));
     border-radius: 16px;
-    padding: 5px 12px;
+    padding: 6px 14px;
     cursor: pointer;
     color: var(--SmartThemeBodyColor, inherit);
     font-size: 0.85em;
@@ -20,23 +23,24 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 
 .st-mm-btn:hover {
-    background: var(--SmartThemeQuoteColor, rgba(128, 128, 128, 0.25));
+    background: var(--SmartThemeQuoteColor, rgba(128, 128, 128, 0.3));
     transform: translateY(-1px);
 }
 
 .st-mm-btn.active-heart {
     color: #ff4757 !important;
-    background: rgba(255, 71, 87, 0.12) !important;
-    border-color: rgba(255, 71, 87, 0.3) !important;
+    background: rgba(255, 71, 87, 0.15) !important;
+    border-color: rgba(255, 71, 87, 0.4) !important;
 }
 
 .st-mm-btn.active-comment {
     color: #1e90ff !important;
-    background: rgba(30, 144, 255, 0.12) !important;
-    border-color: rgba(30, 144, 255, 0.3) !important;
+    background: rgba(30, 144, 255, 0.15) !important;
+    border-color: rgba(30, 144, 255, 0.4) !important;
 }
 
 .pop-anim {

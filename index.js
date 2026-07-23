@@ -41,27 +41,48 @@ function updateFloatingBtn() {
 }
 
 // สร้าง UI ปุ่มลอย และ Modal แปะในหน้าเว็บ
+// เปลี่ยนฟังก์ชัน injectUI เป็นแบบนี้
 function injectUI() {
-    if ($('#mr-floating-btn').length === 0) {
-        $('body').append(`
-            <div id="mr-floating-btn">
-                <div id="mr-badge">0</div>
+    // เช็คให้ชัวร์ว่ายังไม่มีปุ่มนี้อยู่จริงๆ
+    if (document.getElementById('mr-floating-btn') === null) {
+
+        // สร้างก้อน HTML ขึ้นมาใหม่
+        const uiContainer = document.createElement('div');
+        uiContainer.innerHTML = `
+            <div id="mr-floating-btn" style="display: none;">
+                <div id="mr-badge" style="display: none;">0</div>
             </div>
-            <div id="mr-modal">
+            <div id="mr-modal" style="display: none;">
                 <div id="mr-modal-header">
                     <span>รายการโปรด</span>
-                    <i id="mr-close-btn" class="fa-solid fa-xmark"></i>
+                    <i id="mr-close-btn" class="fa-solid fa-xmark" style="cursor: pointer;"></i>
                 </div>
                 <div id="mr-modal-body"></div>
             </div>
-        `);
+        `;
 
+        // ยัดลงไปใน body ตรงๆ
+        document.body.appendChild(uiContainer);
+
+        // ผูกระบบลากและคลิก
         setupDraggable();
 
-        $('#mr-floating-btn').on('click', renderModal);
-        $('#mr-close-btn').on('click', () => $('#mr-modal').hide());
+        // ใช้ jQuery ผูก Event หลังจากที่มันถูกสร้างขึ้นมาแล้วจริงๆ
+        $(document).on('click', '#mr-floating-btn', function(e) {
+            // ป้องกันไม่ให้มันเปิดหน้าต่างตอนที่เราแค่ลากปุ่ม
+            if (!$(this).hasClass('is-dragging')) {
+                renderModal();
+            }
+        });
+
+        $(document).on('click', '#mr-close-btn', function() {
+            $('#mr-modal').hide();
+        });
+
+        console.log(`[${extensionName}] UI Injected successfully.`);
     }
 }
+
 
 // ระบบลากปุ่ม (รองรับทั้งเมาส์และนิ้ว และกันหลุดขอบ)
 function setupDraggable() {

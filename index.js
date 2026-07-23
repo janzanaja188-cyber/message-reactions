@@ -3,6 +3,9 @@
 const MODULE_NAME = "stMessageMemory";
 let memoryData = {};
 
+/**
+ * 1. Initialization & Storage
+ */
 function initStorage() {
     const context = SillyTavern.getContext();
     if (!context.extensionSettings[MODULE_NAME]) {
@@ -43,37 +46,44 @@ function createNewRecord(mesId) {
     };
 }
 
+/**
+ * 2. HTML Templates Injection (แก้ปัญหาโฟลเดอร์ไม่ตรงและโหลด Template ไม่ขึ้น)
+ */
 function injectModals() {
-    if (document.getElementById('st-mm-main-modal')) return;
+    if (document.getElementById('st-mm-main-modal')) return; // ป้องกันการสร้างซ้ำ
 
     const modalsHTML = `
+        <!-- Main Book Modal -->
         <div id="st-mm-main-modal" class="st-mm-modal-overlay" style="display: none;">
             <div class="st-mm-modal-content st-ios-panel">
                 <div class="st-mm-modal-header">
-                    <h2><i class="fa-solid fa-book-bookmark"></i> Memory Vault</h2>
+                    <h2>📖 ความทรงจำ</h2>
                     <button class="st-mm-close-btn" id="st-mm-close-main"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 <div class="st-mm-tabs">
-                    <button class="st-mm-tab active" data-tab="hearts"><i class="fa-solid fa-heart"></i> Favorites</button>
-                    <button class="st-mm-tab" data-tab="comments"><i class="fa-solid fa-comment-dots"></i> Comments</button>
+                    <button class="st-mm-tab active" data-tab="hearts">❤️ ที่กดใจ</button>
+                    <button class="st-mm-tab" data-tab="comments">💬 คอมเมนต์</button>
                 </div>
-                <div class="st-mm-list-container ios-scroll" id="st-mm-list-container"></div>
+                <div class="st-mm-list-container ios-scroll" id="st-mm-list-container">
+                    <!-- Items injected here -->
+                </div>
             </div>
         </div>
 
+        <!-- Comment Modal -->
         <div id="st-mm-comment-modal" class="st-mm-modal-overlay" style="display: none;">
             <div class="st-mm-modal-content st-mm-comment-box st-ios-panel">
                 <div class="st-mm-modal-header">
-                    <h2><i class="fa-solid fa-pen-nib"></i> Add Comment</h2>
+                    <h2>💬 เขียนคอมเมนต์</h2>
                 </div>
                 <div class="st-mm-modal-body">
-                    <input type="text" id="st-mm-comment-title" class="st-ios-input" placeholder="Title (Optional)" autocomplete="off" />
-                    <textarea id="st-mm-comment-detail" class="st-ios-input ios-scroll" placeholder="Write your thoughts here..." rows="4"></textarea>
+                    <input type="text" id="st-mm-comment-title" class="st-ios-input" placeholder="หัวข้อ (ไม่บังคับ)" autocomplete="off" />
+                    <textarea id="st-mm-comment-detail" class="st-ios-input ios-scroll" placeholder="คิดอะไรอยู่... พิมพ์เลย!" rows="4"></textarea>
                     <input type="hidden" id="st-mm-comment-mesid" />
                 </div>
                 <div class="st-mm-modal-footer">
-                    <button id="st-mm-comment-cancel" class="st-mm-btn-ios-secondary">Cancel</button>
-                    <button id="st-mm-comment-save" class="st-mm-btn-ios-primary">Save</button>
+                    <button id="st-mm-comment-cancel" class="st-mm-btn-ios-secondary">ยกเลิก</button>
+                    <button id="st-mm-comment-save" class="st-mm-btn-ios-primary">บันทึก</button>
                 </div>
             </div>
         </div>
@@ -81,6 +91,9 @@ function injectModals() {
     $('body').append(modalsHTML);
 }
 
+/**
+ * 3. DOM Injection (แทรกปุ่มท้ายข้อความ)
+ */
 function injectButtons(mesId) {
     const context = SillyTavern.getContext();
     const chat = context.chat;
@@ -102,9 +115,15 @@ function injectButtons(mesId) {
     container.className = 'st-mm-button-container';
 
     container.innerHTML = `
-        <button class="st-mm-btn st-mm-heart" data-mesid="${mesId}" title="Like"><i class="fa-solid fa-heart"></i></button>
-        <button class="st-mm-btn st-mm-comment" data-mesid="${mesId}" title="Comment"><i class="fa-solid fa-comment"></i></button>
-        <button class="st-mm-btn st-mm-book" data-mesid="${mesId}" title="Memory Vault"><i class="fa-solid fa-book"></i></button>
+        <div class="st-mm-btn st-mm-heart" data-mesid="${mesId}" title="ถูกใจ">
+            <i class="fa-solid fa-heart"></i>
+        </div>
+        <div class="st-mm-btn st-mm-comment" data-mesid="${mesId}" title="คอมเมนต์">
+            <i class="fa-solid fa-comment"></i>
+        </div>
+        <div class="st-mm-btn st-mm-book" data-mesid="${mesId}" title="สมุดความจำ">
+            <i class="fa-solid fa-book"></i>
+        </div>
     `;
 
     const mesText = mesBlock.querySelector('.mes_text');
@@ -142,6 +161,9 @@ function updateSingleButtonUI(mesId) {
     }
 }
 
+/**
+ * 4. Rendering List
+ */
 function renderMemoryList(activeTab) {
     const context = SillyTavern.getContext();
     const currentChatId = context.chatId || 'no_chat';
@@ -157,12 +179,7 @@ function renderMemoryList(activeTab) {
     });
 
     if (filtered.length === 0) {
-        container.append(`
-            <div class="st-mm-empty">
-                <i class="fa-solid fa-box-open"></i>
-                <span>No records found in this category.</span>
-            </div>
-        `);
+        container.append(`<div class="st-mm-empty"><i class="fa-solid fa-ghost"></i><br>ยังไม่มีความทรงจำในหน้านี้เลย!</div>`);
         return;
     }
 
@@ -173,10 +190,11 @@ function renderMemoryList(activeTab) {
             day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' 
         });
         
-        const displayTitle = r.title ? DOMPurify.sanitize(r.title) : `Message #${r.mesId}`;
+        // Use ST's built-in DOMPurify
+        const displayTitle = r.title ? DOMPurify.sanitize(r.title) : `ข้อความที่ ${r.mesId}`;
         const safeSnippet = DOMPurify.sanitize(r.snippet);
         const safeComment = r.comment ? DOMPurify.sanitize(r.comment) : '';
-        const hasCommentHTML = r.comment ? `<div class="st-mm-item-comment-text"><i class="fa-solid fa-comment-dots"></i> ${safeComment}</div>` : '';
+        const hasCommentHTML = r.comment ? `<div class="st-mm-item-comment-text">💬 ${safeComment}</div>` : '';
 
         const itemHtml = `
             <div class="st-mm-list-item ios-card">
@@ -186,9 +204,9 @@ function renderMemoryList(activeTab) {
                         <span class="st-mm-item-date">${dateStr}</span>
                     </div>
                     <div class="st-mm-item-actions">
-                        <button class="st-mm-action-btn st-mm-edit-btn" data-id="${r.id}" title="Edit Title"><i class="fa-solid fa-pencil"></i></button>
-                        <button class="st-mm-action-btn st-mm-warp-btn" data-mesid="${r.mesId}" title="Jump to Message"><i class="fa-solid fa-location-arrow"></i></button>
-                        <button class="st-mm-action-btn st-mm-delete-btn" data-id="${r.id}" data-mesid="${r.mesId}" title="Delete"><i class="fa-solid fa-trash-can"></i></button>
+                        <button class="st-mm-action-btn st-mm-edit-btn" data-id="${r.id}" title="แก้ไขหัวข้อ"><i class="fa-solid fa-pencil"></i></button>
+                        <button class="st-mm-action-btn st-mm-warp-btn" data-mesid="${r.mesId}" title="ไปที่ข้อความ"><i class="fa-solid fa-location-arrow"></i></button>
+                        <button class="st-mm-action-btn st-mm-delete-btn" data-id="${r.id}" data-mesid="${r.mesId}" title="ลบรายการ"><i class="fa-solid fa-trash-can"></i></button>
                     </div>
                 </div>
                 <div class="st-mm-item-snippet">"${safeSnippet}"</div>
@@ -199,13 +217,19 @@ function renderMemoryList(activeTab) {
     });
 }
 
+/**
+ * 5. Event Listeners & FIX BUGS
+ */
 function attachModalListeners() {
     const context = SillyTavern.getContext();
 
+    // --- Fix: หยุด SillyTavern ไม่ให้แย่งคีย์บอร์ดตอนพิมพ์คอมเมนต์ ---
     $('#st-mm-comment-title, #st-mm-comment-detail').on('keydown keyup keypress', function(e) {
-        e.stopPropagation();
+        e.stopPropagation(); // บล็อก ST's global key handler
     });
+    // -----------------------------------------------------------
 
+    // -- Inline Buttons in Chat --
     $('#chat').on('click', '.st-mm-heart', function() {
         const mesId = $(this).data('mesid');
         const recordId = getRecordId(mesId);
@@ -220,6 +244,7 @@ function attachModalListeners() {
         saveStorage();
         updateSingleButtonUI(mesId);
         
+        // Pop animation for heart
         $(this).addClass('pop-anim');
         setTimeout(() => $(this).removeClass('pop-anim'), 300);
     });
@@ -238,7 +263,7 @@ function attachModalListeners() {
         }
         
         $('#st-mm-comment-modal').css('display', 'flex').hide().fadeIn(250);
-        $('#st-mm-comment-detail').focus();
+        $('#st-mm-comment-detail').focus(); // Auto focus
     });
 
     $('#chat').on('click', '.st-mm-book', function() {
@@ -248,6 +273,7 @@ function attachModalListeners() {
         $('#st-mm-main-modal').css('display', 'flex').hide().fadeIn(250);
     });
 
+    // -- Comment Modal Buttons --
     $('#st-mm-close-comment, #st-mm-comment-cancel').on('click', function() {
         $('#st-mm-comment-modal').fadeOut(250);
     });
@@ -258,7 +284,7 @@ function attachModalListeners() {
         const title = $('#st-mm-comment-title').val().trim();
         
         if (!detail) {
-            toastr.warning("Please enter comment details.");
+            toastr.warning("พิมพ์อะไรสักหน่อยสิ!");
             return;
         }
 
@@ -271,9 +297,10 @@ function attachModalListeners() {
         saveStorage();
         updateSingleButtonUI(mesId);
         $('#st-mm-comment-modal').fadeOut(250);
-        toastr.success("Comment saved successfully.");
+        toastr.success("✨ บันทึกคอมเมนต์เรียบร้อย!");
     });
 
+    // -- Main Modal Buttons --
     $('#st-mm-close-main').on('click', function() {
         $('#st-mm-main-modal').fadeOut(250);
     });
@@ -289,7 +316,7 @@ function attachModalListeners() {
         const record = memoryData[id];
         if (!record) return;
 
-        const newTitle = await context.Popup.show.input("Enter new title:", record.title);
+        const newTitle = await context.Popup.show.input("ตั้งชื่อหัวข้อใหม่:", record.title);
         if (newTitle !== null) {
             record.title = newTitle;
             saveStorage();
@@ -304,10 +331,12 @@ function attachModalListeners() {
         if (target.length) {
             $('#st-mm-main-modal').fadeOut(250);
             target[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Cute blink effect
             target.addClass('ios-blink');
             setTimeout(() => target.removeClass('ios-blink'), 2000);
         } else {
-            toastr.warning("Message not found or out of current DOM view range.");
+            toastr.warning("เลื่อนไปไม่ถึง! ข้อความอาจถูกลบหรืออยู่ลึกเกินไป");
         }
     });
 
@@ -315,17 +344,20 @@ function attachModalListeners() {
         const id = $(this).data('id');
         const mesId = $(this).data('mesid');
         
-        const confirmStr = await context.Popup.show.confirm("Delete Memory", "Are you sure you want to remove this record?");
+        const confirmStr = await context.Popup.show.confirm("ลบความทรงจำ?", "แน่ใจนะว่าจะลบทิ้ง? กู้คืนไม่ได้แล้วนะ");
         if (confirmStr) {
             delete memoryData[id];
             saveStorage();
             renderMemoryList($('.st-mm-tab.active').data('tab'));
             updateSingleButtonUI(mesId);
-            toastr.success("Record deleted.");
+            toastr.success("🗑️ ลบทิ้งเรียบร้อย");
         }
     });
 }
 
+/**
+ * 6. Lifecycle Hooks
+ */
 jQuery(async function () {
     const context = SillyTavern.getContext();
     

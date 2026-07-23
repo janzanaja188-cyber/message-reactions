@@ -5,13 +5,21 @@ const extensionName = "message-reactions";
 let reactionsDB = {};
 let currentTab = 'likes';
 
+// ==========================================
+// 1. ระบบฐานข้อมูล (Database)
+// ==========================================
 function loadReactions() {
     const saved = localStorage.getItem(`${extensionName}_db`);
     if (saved) reactionsDB = JSON.parse(saved);
 }
 
-function saveReactions() { localStorage.setItem(`${extensionName}_db`, JSON.stringify(reactionsDB)); }
+function saveReactions() {
+    localStorage.setItem(`${extensionName}_db`, JSON.stringify(reactionsDB));
+}
 
+// ==========================================
+// 2. ระบบสร้างหน้าต่าง UI (Modal)
+// ==========================================
 function injectUI() {
     if (document.getElementById('mr-modal') === null) {
         const uiContainer = document.createElement('div');
@@ -29,10 +37,15 @@ function injectUI() {
                 <div id="mr-modal-body"></div>
             </div>
         `;
-        (document.getElementById('bg_layer') || document.body).appendChild(uiContainer);
 
+        // แปะลงในหน้าเว็บ
+        const targetContainer = document.getElementById('bg_layer') || document.body;
+        targetContainer.appendChild(uiContainer);
+
+        // ระบบปิดหน้าต่าง
         $(document).on('click', '#mr-close-btn', () => $('#mr-modal').hide());
 
+        // ระบบสลับแท็บ
         $(document).on('click', '.mr-tab-btn', function() {
             $('.mr-tab-btn').removeClass('active');
             $(this).addClass('active');
@@ -40,14 +53,14 @@ function injectUI() {
             renderModal();
         });
 
-        // เปิดแก้ไขชื่อ
+        // ระบบเปิดช่องแก้ไขชื่อ
         $(document).on('click', '.mr-edit-title-icon', function() {
             const container = $(this).closest('.mr-fav-item');
             container.find('.mr-custom-title').hide();
             container.find('.mr-title-edit-container').css('display', 'flex');
         });
 
-        // เซฟชื่อ
+        // ระบบบันทึกชื่อที่แก้ไข
         $(document).on('click', '.mr-save-title-btn', function() {
             const container = $(this).closest('.mr-fav-item');
             const key = $(this).attr('data-key');
@@ -58,17 +71,14 @@ function injectUI() {
             renderModal();
         });
 
-        // ระบบวาร์ป (Scroll)
+        // ระบบวาร์ปกลับไปที่ข้อความ
         $(document).on('click', '.mr-warp-btn', function() {
             const mesId = $(this).attr('data-mesid');
             const targetElement = $(`.mes[mesid="${mesId}"]`);
 
             if (targetElement.length > 0) {
-                // ซ่อนหน้าต่างก่อน
                 $('#mr-modal').hide();
-                // เลื่อนหน้าจอไปหาข้อความแบบนุ่มนวล
                 targetElement[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-                // ไฮไลต์ให้เห็นชัดๆ แว้บนึง
                 targetElement.css('transition', 'background 0.5s').css('background', 'rgba(255, 75, 75, 0.2)');
                 setTimeout(() => targetElement.css('background', ''), 1000);
             } else {
@@ -76,39 +86,37 @@ function injectUI() {
             }
         });
 
-        // ระบบลบ
+        // ระบบลบข้อความที่บันทึกไว้
         $(document).on('click', '.mr-delete-btn', function() {
             if(confirm("แน่ใจนะว่าจะลบความทรงจำนี้?")) {
                 const key = $(this).attr('data-key');
                 const mesId = reactionsDB[key].mesIndex;
 
-                // ลบออกจากฐานข้อมูล
                 delete reactionsDB[key];
                 saveReactions();
 
-                // เอาสีหัวใจในแชทออกทันที (เรียลไทม์)
                 const heartIcon = $(`.heart-btn[data-mesid="${mesId}"] i`);
                 heartIcon.removeClass('fa-solid active-heart').addClass('fa-regular');
 
-                // วาดหน้าจอใหม่
                 renderModal();
             }
         });
     }
 }
 
+// ==========================================
+// 3. ระบบวาดข้อมูลลงในหน้าต่าง
+// ==========================================
 function renderModal() {
     const context = getContext();
     const charId = context.characterId;
     const body = $('#mr-modal-body');
     body.empty();
 
-    // ตัวกรองตามแท็บ
     let items = [];
     if (currentTab === 'likes') {
         items = Object.keys(reactionsDB).filter(k => k.startsWith(charId + '_') && reactionsDB[k].is_favorited).map(k => reactionsDB[k]);
     } else {
-        // อนาคตสำหรับแท็บคอมเมนต์
         body.append('<p style="text-align:center; opacity:0.5; margin-top: 20px;">ระบบคอมเมนต์กำลังก่อสร้าง...</p>');
         return;
     }
@@ -116,7 +124,6 @@ function renderModal() {
     if (items.length === 0) {
         body.append('<p style="text-align:center; opacity:0.5; margin-top: 20px;">ยังไม่มีข้อมูล</p>');
     } else {
-        // เรียงจากใหม่ไปเก่า
         items.sort((a,b) => b.saveTime - a.saveTime).forEach(item => {
             const dateStr = new Date(item.saveTime).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
             const titleDisplay = item.customTitle ? `<span class="mr-custom-title">${item.customTitle}</span>` : '';
@@ -144,6 +151,9 @@ function renderModal() {
     }
 }
 
+// ==========================================
+// 4. ระบบแทรกปุ่มลงในแชท
+// ==========================================
 function processMessage(mesId) {
     const context = getContext();
     const chatData = context.chat;
@@ -164,7 +174,7 @@ function processMessage(mesId) {
             <div class="reaction-btn comment-btn" title="Comment" data-key="${uniqueKey}" data-mesid="${mesId}">
                 <i class="fa-regular fa-comment"></i>
             </div>
-            <div class="reaction-btn view-fav-btn" title="ดูรายการโปรด">
+            <div class="reaction-btn view-fav-btn" title="ดูรายการที่บันทึกไว้">
                 <i class="fa-solid fa-book-bookmark"></i>
             </div>
         </div>
@@ -178,8 +188,11 @@ function processAllMessages() {
     for (let i = 0; i < context.chat.length; i++) processMessage(i);
 }
 
+// ==========================================
+// 5. การทำงานหลัก (Main Initialization)
+// ==========================================
 jQuery(async () => {
-    console.log(`[${extensionName}] Loading... (Stage 6: Real-time, Warp, Delete, Responsive)`);
+    console.log(`[${extensionName}] Loading... (Stage 6: Final Setup)`);
     loadReactions();
     setTimeout(injectUI, 1000);
 
@@ -187,14 +200,16 @@ jQuery(async () => {
     eventSource.on(event_types.MESSAGE_RECEIVED, (mesId) => setTimeout(() => processMessage(mesId), 100));
     eventSource.on(event_types.MESSAGE_UPDATED, (mesId) => setTimeout(() => processMessage(mesId), 100));
 
-    // กดหัวใจ (อัปเดตหน้าต่างเรียลไทม์)
+    // ระบบตรวจจับการกดหัวใจ
     $(document).on('click', '.heart-btn', function() {
         const icon = $(this).find('i');
         const uniqueKey = $(this).attr('data-key');
         const mesId = $(this).attr('data-mesid');
         const snippet = getContext().chat[mesId].mes.replace(/<[^>]*>?/gm, '').substring(0, 50) + "...";
 
-        if (!reactionsDB[uniqueKey]) reactionsDB[uniqueKey] = { key: uniqueKey, mesIndex: mesId, snippet: snippet, saveTime: Date.now(), customTitle: "" };
+        if (!reactionsDB[uniqueKey]) {
+            reactionsDB[uniqueKey] = { key: uniqueKey, mesIndex: mesId, snippet: snippet, saveTime: Date.now(), customTitle: "" };
+        }
 
         if (icon.hasClass('fa-regular')) {
             icon.removeClass('fa-regular').addClass('fa-solid active-heart');
@@ -205,11 +220,18 @@ jQuery(async () => {
             icon.removeClass('fa-solid active-heart').addClass('fa-regular');
             reactionsDB[uniqueKey].is_favorited = false;
         }
+
         saveReactions();
 
-        // ถ้ารายการโปรดเปิดอยู่ ให้อัปเดตทันที
         if ($('#mr-modal').is(':visible') && currentTab === 'likes') renderModal();
     });
 
-    $(document).on('click', '.view-fav-btn', () => { currentTab = 'likes'; $('.mr-tab-btn').removeClass('active'); $('.mr-tab-btn[data-tab="likes"]').addClass('active'); $('#mr-modal').css('display', 'flex'); renderModal(); });
+    // ระบบตรวจจับการกดปุ่มดูรายการโปรด
+    $(document).on('click', '.view-fav-btn', () => {
+        currentTab = 'likes';
+        $('.mr-tab-btn').removeClass('active');
+        $('.mr-tab-btn[data-tab="likes"]').addClass('active');
+        $('#mr-modal').css('display', 'flex');
+        renderModal();
+    });
 });

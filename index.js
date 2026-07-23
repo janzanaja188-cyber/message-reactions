@@ -240,3 +240,27 @@ jQuery(async () => {
         updateFloatingBtn(); // อัปเดตตัวเลขบนปุ่ม
     });
 });
+
+jQuery(async () => {
+    console.log(`[${extensionName}] Loading... (Stage 4.1: Forced UI Injection)`);
+
+    loadReactions();
+
+    // หน่วงเวลาให้ ST สร้างหน้าเว็บเสร็จก่อน ค่อยยัด UI ของเราลงไป
+    setTimeout(() => {
+        injectUI();
+        updateFloatingBtn(); // อัปเดตสถานะปุ่มทันที
+    }, 1000); // รอ 1 วินาที
+
+    eventSource.on(event_types.CHAT_CHANGED, () => {
+        processAllMessages();
+        setTimeout(updateFloatingBtn, 500); // อัปเดตรูปบอทตอนเปลี่ยนแชท
+    });
+
+    eventSource.on(event_types.MESSAGE_RECEIVED, (mesId) => {
+        setTimeout(() => { processMessage(mesId); updateFloatingBtn(); }, 100);
+    });
+
+    eventSource.on(event_types.MESSAGE_UPDATED, (mesId) => {
+        setTimeout(() => processMessage(mesId), 100);
+    });

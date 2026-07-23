@@ -3,6 +3,7 @@ import { eventSource, event_types } from "../../../../script.js";
 
 const extensionName = "message-reactions";
 let reactionsDB = {};
+let currentTab = 'likes'; // ค่าเริ่มต้นให้แสดงแท็บหัวใจ
 
 function loadReactions() {
     const saved = localStorage.getItem(`${extensionName}_db`);
@@ -13,7 +14,6 @@ function saveReactions() {
     localStorage.setItem(`${extensionName}_db`, JSON.stringify(reactionsDB));
 }
 
-// สร้างแค่ Modal ซ่อนไว้
 function injectUI() {
     if (document.getElementById('mr-modal') === null) {
         const uiContainer = document.createElement('div');
@@ -21,8 +21,12 @@ function injectUI() {
         uiContainer.innerHTML = `
             <div id="mr-modal" style="display: none;">
                 <div id="mr-modal-header">
-                    <span>รายการโปรด</span>
-                    <i id="mr-close-btn" class="fa-solid fa-xmark" style="cursor: pointer;"></i>
+                    <span>ความทรงจำ</span>
+                    <i id="mr-close-btn" class="fa-solid fa-xmark" title="ปิด"></i>
+                </div>
+                <div class="mr-tabs">
+                    <div class="mr-tab-btn active" data-tab="likes"><i class="fa-solid fa-heart"></i> ที่กดใจ</div>
+                    <div class="mr-tab-btn" data-tab="comments"><i class="fa-solid fa-comment"></i> คอมเมนต์</div>
                 </div>
                 <div id="mr-modal-body"></div>
             </div>
@@ -31,50 +35,92 @@ function injectUI() {
         const targetContainer = document.getElementById('bg_layer') || document.body;
         targetContainer.appendChild(uiContainer);
 
+        // ปิดหน้าต่าง
         $(document).on('click', '#mr-close-btn', function() {
             $('#mr-modal').hide();
         });
 
-        console.log(`[${extensionName}] Modal Injected.`);
+        // กดสลับแท็บ
+        $(document).on('click', '.mr-tab-btn', function() {
+            $('.mr-tab-btn').removeClass('active');
+            $(this).addClass('active');
+            currentTab = $(this).attr('data-tab');
+            renderModal();
+        });
+
+        // กดดินสอเพื่อแก้ไขชื่อ
+        $(document).on('click', '.mr-edit-title-icon', function() {
+            const container = $(this).closest('.mr-fav-item');
+            container.find('.mr-custom-title').hide();
+            container.find('.mr-title-edit-container').css('display', 'flex');
+        });
+
+        // กดเซฟชื่อ (เครื่องหมายถูก)
+        $(document).on('click', '.mr-save-title-btn', function() {
+            const container = $(this).closest('.mr-fav-item');
+            const key = $(this).attr('data-key');
+            const newTitle = container.find('.mr-fav-title-input').val();
+
+            if(reactionsDB[key]) {
+                reactionsDB[key].customTitle = newTitle;
+                saveReactions();
+            }
+            renderModal();
+        });
+
+        console.log(`[${extensionName}] UI Injected (Tabs & Modal).`);
     }
 }
 
-// วาดรายการโปรด
 function renderModal() {
     const context = getContext();
     const charId = context.characterId;
     const body = $('#mr-modal-body');
     body.empty();
 
-    const favs = Object.keys(reactionsDB)
+    // กรองข้อมูลตามแท็บ (ตอนนี้มีแค่ข้อมูลการกดหัวใจ)
+    const items = Object.keys(reactionsDB)
         .filter(k => k.startsWith(charId + '_') && reactionsDB[k].is_favorited)
         .map(k => reactionsDB[k]);
 
-    if (favs.length === 0) {
-        body.append('<p style="text-align:center; opacity:0.5;">ยังไม่มีข้อความโปรด</p>');
+    if (items.length === 0) {
+        body.append('<p style="text-align:center; opacity:0.5; margin-top: 20px;">ยังไม่มีข้อมูลในหมวดนี้</p>');
     } else {
-        favs.forEach(fav => {
+        items.forEach(item => {
+            const dateObj = new Date(item.saveTime);
+            // แสดงวันที่และเวลาให้ชัดเจน
+            const dateStr = dateObj.toLocaleDateString('th-TH', {
+                year: 'numeric', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+
+            const titleDisplay = item.customTitle
+                ? `<span class="mr-custom-title">${item.customTitle}</span>`
+                : '';
+
             const html = `
-                <div class="mr-fav-item">
-                    <div class="mr-fav-header">ข้อความที่ ${fav.mesIndex} • ${new Date(fav.saveTime).toLocaleString()}</div>
-                    <input type="text" class="mr-fav-title-input" data-key="${fav.key}" placeholder="ตั้งชื่อความทรงจำ..." value="${fav.customTitle || ''}">
-                    <div class="mr-fav-snippet">"${fav.snippet}"</div>
+                <div class="mr-fav-item" data-key="${item.key}" data-mesid="${item.mesIndex}">
+                    <div class="mr-item-top">
+                        <div class="mr-fav-header">ข้อความที่ ${item.mesIndex} • ${dateStr}</div>
+                        <div class="mr-item-actions">
+                            <i class="fa-solid fa-pencil mr-edit-title-icon" title="แก้ไขชื่อ"></i>
+                        </div>
+                    </div>
+                    ${titleDisplay}
+                    <div class="mr-title-edit-container">
+                        <input type="text" class="mr-fav-title-input" value="${item.customTitle || ''}" placeholder="ตั้งชื่อความทรงจำ...">
+                        <i class="fa-solid fa-check mr-save-title-btn" data-key="${item.key}"></i>
+                    </div>
+                    <div class="mr-fav-snippet">"${item.snippet}"</div>
                 </div>
             `;
             body.append(html);
-        });
-
-        $('.mr-fav-title-input').on('input', function() {
-            const key = $(this).attr('data-key');
-            reactionsDB[key].customTitle = $(this).val();
-            saveReactions();
         });
     }
 
     $('#mr-modal').css('display', 'flex');
 }
 
-// แทรกปุ่มหัวใจ + ปุ่มดูรายการโปรด
 function processMessage(mesId) {
     const context = getContext();
     const chatData = context.chat;
@@ -95,7 +141,7 @@ function processMessage(mesId) {
             <div class="reaction-btn heart-btn" title="Like" data-key="${uniqueKey}" data-mesid="${mesId}">
                 <i class="fa-heart ${heartClass}"></i>
             </div>
-            <div class="reaction-btn view-fav-btn" title="ดูรายการโปรด">
+            <div class="reaction-btn view-fav-btn" title="ดูความทรงจำ">
                 <i class="fa-solid fa-book-bookmark"></i>
             </div>
         </div>
@@ -111,7 +157,7 @@ function processAllMessages() {
 }
 
 jQuery(async () => {
-    console.log(`[${extensionName}] Loading... (Inline Button Mode)`);
+    console.log(`[${extensionName}] Loading... (Stage 5 Full: UI & Tabs)`);
 
     loadReactions();
 
@@ -131,7 +177,7 @@ jQuery(async () => {
         setTimeout(() => processMessage(mesId), 100);
     });
 
-    // กดหัวใจ
+    // ระบบกดหัวใจ
     $(document).on('click', '.heart-btn', function() {
         const icon = $(this).find('i');
         const uniqueKey = $(this).attr('data-key');
@@ -139,6 +185,7 @@ jQuery(async () => {
 
         const context = getContext();
         const msgText = context.chat[mesId].mes;
+        // เก็บข้อความย่อมาแสดง
         const snippet = msgText.replace(/<[^>]*>?/gm, '').substring(0, 50) + "...";
 
         if (!reactionsDB[uniqueKey]) {
@@ -164,7 +211,7 @@ jQuery(async () => {
         saveReactions();
     });
 
-    // กดปุ่มดูรายการโปรด (ปุ่มใหม่ข้างๆ หัวใจ)
+    // กดปุ่มรูปสมุดเพื่อเปิดหน้าต่าง
     $(document).on('click', '.view-fav-btn', function() {
         renderModal();
     });

@@ -4,555 +4,316 @@ import { eventSource, event_types } from "../../../../script.js";
 const extensionName = "message-reactions";
 let reactionsDB = {};
 let currentTab = 'likes';
+let activeCommentKey = null;
+let activeCommentMesId = null;
 
-function loadDB() {
+// ==========================================
+// 1. Database
+// ==========================================
+function loadReactions() {
     const saved = localStorage.getItem(`${extensionName}_db`);
     if (saved) reactionsDB = JSON.parse(saved);
 }
-function saveDB() { localStorage.setItem(`${extensionName}_db`, JSON.stringify(reactionsDB)); }
+
+function saveReactions() {
+    localStorage.setItem(`${extensionName}_db`, JSON.stringify(reactionsDB));
+}
 
 // ==========================================
-// 1. สร้างหน้าต่างแบบ Pop-up (ไม่เต็มจอ)
+// 2. Inject UI (Main Modal & Comment Popup)
 // ==========================================
 function injectUI() {
-    if ($('#mr-modal-fav').length === 0) {
-        const uiHtml = `
-            <!-- ป๊อปอัปรายการโปรด -->
-            <div id="mr-modal-fav" class="mr-popup-modal">
-                <div class="mr-modal-header">
-                    <span>ความทรงจำ</span>
-                    <div id="mr-close-fav" class="mr-close-btn"><i class="fa-solid fa-xmark"></i></div>
+    if (document.getElementById('mr-extension-container') === null) {
+        const uiContainer = document.createElement('div');
+        uiContainer.id = "mr-extension-container";
+        uiContainer.innerHTML = `
+            <!-- Main Modal -->
+            <div id="mr-modal" style="display: none;">
+                <div id="mr-modal-header">
+                    <span>รายการที่บันทึกไว้</span>
+                    <i id="mr-close-btn" class="fa-solid fa-xmark" title="ปิด"></i>
                 </div>
                 <div class="mr-tabs">
                     <div class="mr-tab-btn active" data-tab="likes"><i class="fa-solid fa-heart"></i> ที่กดใจ</div>
                     <div class="mr-tab-btn" data-tab="comments"><i class="fa-solid fa-comment"></i> คอมเมนต์</div>
                 </div>
-                <div id="mr-content-fav" class="mr-modal-content"></div>
+                <div id="mr-modal-body"></div>
             </div>
 
-            <!-- ป๊อปอัปเขียนคอมเมนต์ -->
-            <div id="mr-modal-comment" class="mr-popup-modal" style="height: auto; max-height: 80vh;">
-                <div class="mr-modal-header">
-                    <span>เขียนคอมเมนต์</span>
+            <!-- Comment Popup Modal -->
+            <div id="mr-comment-modal" style="display: none;">
+                <div id="mr-comment-header">เขียนคอมเมนต์</div>
+                <div id="mr-comment-body">
+                    <input type="text" id="mr-input-comment-title" class="mr-comment-input-title" placeholder="หัวข้อ (ไม่ใส่ก็ได้)">
+                    <textarea id="mr-input-comment-detail" class="mr-comment-input-detail" placeholder="รายละเอียดคอมเมนต์..."></textarea>
                 </div>
-                <div class="mr-modal-content">
-                    <div class="mr-comment-form">
-                        <input type="hidden" id="mr-comment-target-key">
-                        <input type="hidden" id="mr-comment-target-mesid">
-                        <input type="text" id="mr-comment-title" class="mr-input-style" placeholder="หัวข้อ (ไม่ใส่ก็ได้)...">
-                        <textarea id="mr-comment-text" class="mr-comment-textarea" placeholder="พิมพ์รายละเอียด..."></textarea>
-                        <div class="mr-comment-actions">
-                            <button id="mr-cancel-comment" class="mr-btn mr-btn-cancel">ยกเลิก</button>
-                            <button id="mr-save-comment" class="mr-btn mr-btn-save">บันทึก</button>
-                        </div>
-                    </div>
+                <div id="mr-comment-footer">
+                    <div class="mr-btn-cancel" id="mr-cancel-comment">ยกเลิก</div>
+                    <div class="mr-btn-save" id="mr-save-comment">บันทึก</div>
                 </div>
             </div>
         `;
-        $('body').append(uiHtml);
 
-        $('#mr-close-fav').on('click', () => $('#mr-modal-fav').hide());
-        $('#mr-cancel-comment').on('click', () => $('#mr-modal-comment').hide());
+        const targetContainer = document.getElementById('bg_layer') || document.body;
+        targetContainer.appendChild(uiContainer);
+
+        // --- Event Bindings สำหรับ Main Modal ---
+        $(document).on('click', '#mr-close-btn', () => $('#mr-modal').hide());
 
         $(document).on('click', '.mr-tab-btn', function() {
             $('.mr-tab-btn').removeClass('active');
             $(this).addClass('active');
             currentTab = $(this).attr('data-tab');
-            renderFavs();
+            renderModal();
+        });
+
+        $(document).on('click', '.mr-edit-title-icon', function() {
+            const container = $(this).closest('.mr-fav-item');
+            container.find('.mr-custom-title').hide();
+            container.find('.mr-title-edit-container').css('display', 'flex');
+        });
+
+        $(document).on('click', '.mr-save-title-btn', function() {
+            const container = $(this).closest('.mr-fav-item');
+            const key = $(this).attr('data-key');
+            if(reactionsDB[key]) {
+                reactionsDB[key].customTitle = container.find('.mr-fav-title-input').val();
+                saveReactions();
+            }
+            renderModal();
+        });
+
+        $(document).on('click', '.mr-warp-btn', function() {
+            const mesId = $(this).attr('data-mesid');
+            const targetElement = $(`.mes[mesid="${mesId}"]`);
+            if (targetElement.length > 0) {
+                $('#mr-modal').hide();
+                targetElement[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                targetElement.css('transition', 'background 0.5s').css('background', 'rgba(255, 75, 75, 0.2)');
+                setTimeout(() => targetElement.css('background', ''), 1000);
+            } else {
+                alert("ไม่พบข้อความนี้ในหน้าจอ");
+            }
+        });
+
+        $(document).on('click', '.mr-delete-btn', function() {
+            if(confirm("แน่ใจนะว่าจะลบรายการนี้?")) {
+                const key = $(this).attr('data-key');
+                const mesId = reactionsDB[key].mesIndex;
+
+                // ถ้ายกเลิกการกดใจ ให้เปลี่ยนสีปุ่มในแชทด้วย
+                if(reactionsDB[key].is_favorited) {
+                    $(`.heart-btn[data-mesid="${mesId}"] i`).removeClass('fa-solid active-heart').addClass('fa-regular');
+                }
+
+                delete reactionsDB[key];
+                saveReactions();
+                renderModal();
+            }
+        });
+
+        // --- Event Bindings สำหรับ Comment Popup ---
+        $(document).on('click', '#mr-cancel-comment', function() {
+            $('#mr-comment-modal').hide();
+            activeCommentKey = null;
+            activeCommentMesId = null;
+        });
+
+        $(document).on('click', '#mr-save-comment', function() {
+            const title = $('#mr-input-comment-title').val();
+            const detail = $('#mr-input-comment-detail').val();
+
+            if (!detail.trim()) {
+                alert("กรุณาใส่รายละเอียดคอมเมนต์");
+                return;
+            }
+
+            const snippet = getContext().chat[activeCommentMesId].mes.replace(/<[^>]*>?/gm, '').substring(0, 50) + "...";
+
+            if (!reactionsDB[activeCommentKey]) {
+                reactionsDB[activeCommentKey] = { key: activeCommentKey, mesIndex: activeCommentMesId, snippet: snippet, saveTime: Date.now(), customTitle: "", is_favorited: false, comment_title: "", comment_detail: "" };
+            }
+
+            reactionsDB[activeCommentKey].comment_title = title;
+            reactionsDB[activeCommentKey].comment_detail = detail;
+            reactionsDB[activeCommentKey].has_comment = true;
+
+            // อัปเดตเวลาให้เป็นล่าสุด
+            reactionsDB[activeCommentKey].saveTime = Date.now();
+
+            saveReactions();
+            $('#mr-comment-modal').hide();
+
+            // ถ้าเปิดหน้าต่างหลักอยู่ ให้อัปเดต
+            if ($('#mr-modal').is(':visible') && currentTab === 'comments') renderModal();
         });
     }
 }
 
 // ==========================================
-// 2. ระบบวาดข้อมูลลงในป๊อปอัป
+// 3. Render Modal Data
 // ==========================================
-function renderFavs() {
-    const charId = getContext().characterId;
-    const box = $('#mr-content-fav');
-    box.empty();
+function renderModal() {
+    const context = getContext();
+    const charId = context.characterId;
+    const body = $('#mr-modal-body');
+    body.empty();
 
     let items = [];
     if (currentTab === 'likes') {
-        items = Object.keys(reactionsDB).filter(k => k.startsWith(charId + '_') && reactionsDB[k].is_favorited).map(k => reactionsDB[k]);
+        items = Object.keys(reactionsDB).filter(k => k.startsWith(charId + '_') && reactionsDB[k] && reactionsDB[k].is_favorited === true).map(k => reactionsDB[k]);
+    } else if (currentTab === 'comments') {
+        items = Object.keys(reactionsDB).filter(k => k.startsWith(charId + '_') && reactionsDB[k] && reactionsDB[k].has_comment === true).map(k => reactionsDB[k]);
+    }
+
+    if (!items || items.length === 0) {
+        body.append('<p style="text-align:center; opacity:0.5; margin-top: 20px;">ยังไม่มีข้อมูล</p>');
     } else {
-        items = Object.keys(reactionsDB).filter(k => k.startsWith(charId + '_') && reactionsDB[k].commentText).map(k => reactionsDB[k]);
-    }
+        items.sort((a,b) => b.saveTime - a.saveTime).forEach(item => {
+            try {
+                const saveTimeValue = item.saveTime || Date.now();
+                const dateStr = new Date(saveTimeValue).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-    if (items.length === 0) {
-        box.append('<div style="text-align:center; opacity:0.5; padding: 20px;">ไม่มีข้อมูล</div>');
-        return;
-    }
+                let contentDisplay = '';
+                if (currentTab === 'likes') {
+                    contentDisplay = item.customTitle ? `<span class="mr-custom-title">${item.customTitle}</span>` : '';
+                } else {
+                    // แสดงคอมเมนต์
+                    const cTitle = item.comment_title ? `<span class="mr-custom-title">หัวข้อ: ${item.comment_title}</span>` : '';
+                    contentDisplay = `${cTitle}<div style="margin-bottom: 10px; color: #4CAF50;">${item.comment_detail}</div>`;
+                }
 
-    items.sort((a,b) => b.saveTime - a.saveTime).forEach(item => {
-        const dStr = new Date(item.saveTime).toLocaleString('th-TH');
-        let contentHtml = '';
+                const snippetText = item.snippet || "ไม่สามารถแสดงข้อความได้";
 
-        if (currentTab === 'likes') {
-            const titleHtml = item.customTitle ? `<div class="mr-custom-title">${item.customTitle}</div>` : '';
-            contentHtml = `
-                ${titleHtml}
-                <div class="mr-title-edit-box">
-                    <input type="text" class="mr-input-style mr-edit-input" value="${item.customTitle || ''}" placeholder="ตั้งชื่อความทรงจำ...">
-                    <i class="fa-solid fa-check mr-save-icon" data-key="${item.key}" data-type="like"></i>
-                </div>
-                <div class="mr-fav-snippet">"${item.snippet}"</div>
-            `;
-        } else {
-            const titleHtml = item.commentTitle ? `<div class="mr-custom-title">${item.commentTitle}</div>` : '';
-            contentHtml = `
-                ${titleHtml}
-                <div class="mr-title-edit-box">
-                    <input type="text" class="mr-input-style mr-edit-input" value="${item.commentTitle || ''}" placeholder="แก้ไขหัวข้อ...">
-                    <i class="fa-solid fa-check mr-save-icon" data-key="${item.key}" data-type="comment"></i>
-                </div>
-                <div style="padding: 10px; background: rgba(0,0,0,0.5); border-radius: 5px; margin-top: 5px;">${item.commentText.replace(/\n/g, '<br>')}</div>
-            `;
-        }
-
-        box.append(`
-            <div class="mr-fav-item">
-                <div class="mr-item-top">
-                    <div class="mr-fav-header">ข้อความที่ ${item.mesIndex} • ${dStr}</div>
-                    <div class="mr-item-actions">
-                        <i class="fa-solid fa-rocket mr-warp-btn" data-mesid="${item.mesIndex}" title="วาร์ป"></i>
-                        <i class="fa-solid fa-pencil mr-edit-btn" title="แก้ไขหัวข้อ"></i>
-                        <i class="fa-solid fa-trash-can mr-delete-btn" data-key="${item.key}" data-tab="${currentTab}" title="ลบ"></i>
-                    </div>
-                </div>
-                ${contentHtml}
-            </div>
-        `);
-    });
-}
-
-// ==========================================
-// 3. แทรกปุ่มในแชท (แก้บั๊กหาย)
-// ==========================================
-function processMsg(mesId) {
-    const chat = getContext().chat;
-    if (!chat || !chat[mesId] || chat[mesId].is_user) return;
-
-    const el = $(`.mes[mesid="${mesId}"]`);
-    if (el.find('.msg-reaction-container').length > 0) return;
-
-    const key = `${getContext().characterId}_${mesId}`;
-    const isFav = reactionsDB[key]?.is_favorited;
-    const hClass = isFav ? 'fa-solid active-heart' : 'fa-regular';
-    const hasComment = reactionsDB[key]?.commentText ? 'fa-solid' : 'fa-regular';
-
-    el.find('.mes_text').after(`
-        <div class="msg-reaction-container" style="display: flex; gap: 10px; margin-top: 5px; padding-left: 10px;">
-            <div class="reaction-btn heart-btn" data-key="${key}" data-mesid="${mesId}"><i class="fa-heart ${hClass}"></i></div>
-            <div class="reaction-btn comment-btn" data-key="${key}" data-mesid="${mesId}"><i class="fa-comment ${hasComment}"></i></div>
-            <div class="reaction-btn view-fav-btn"><i class="fa-solid fa-book-bookmark"></i></div>
-        </div>
-    `);
-}
-
-function scanChat() {
-    const chat = getContext().chat;
-    if (chat) for (let i=0; i<chat.length; i++) processMsg(i);
-}
-
-// ==========================================
-// 4. การทำงานหลัก
-// ==========================================
-jQuery(async () => {
-    loadDB();
-    setTimeout(injectUI, 1000);
-
-    eventSource.on(event_types.CHAT_CHANGED, scanChat);
-    eventSource.on(event_types.MESSAGE_RECEIVED, (id) => setTimeout(() => processMsg(id), 100));
-    eventSource.on(event_types.MESSAGE_UPDATED, (id) => setTimeout(() => processMsg(id), 100));
-
-    $(document).on('click', '.heart-btn', function() {
-        const key = $(this).attr('data-key');
-        const mesId = $(this).attr('data-mesid');
-        const snip = getContext().chat[mesId].mes.replace(/<[^>]*>?/gm, '').substring(0, 50);
-
-        if (!reactionsDB[key]) reactionsDB[key] = { key, mesIndex: mesId, snippet: snip, saveTime: Date.now() };
-
-        const icon = $(this).find('i');
-        if (icon.hasClass('fa-regular')) {
-            icon.removeClass('fa-regular').addClass('fa-solid active-heart');
-            reactionsDB[key].is_favorited = true;
-        } else {
-            icon.removeClass('fa-solid active-heart').addClass('fa-regular');
-            reactionsDB[key].is_favorited = false;
-        }
-        saveDB();
-        if ($('#mr-modal-fav').is(':visible') && currentTab === 'likes') renderFavs();
-    });
-
-    $(document).on('click', '.view-fav-btn', () => {
-        $('#mr-modal-fav').css('display', 'flex');
-        renderFavs();
-    });
-
-    $(document).on('click', '.comment-btn', function() {
-        const key = $(this).attr('data-key');
-        const mesId = $(this).attr('data-mesid');
-        const dbItem = reactionsDB[key] || {};
-
-        $('#mr-comment-target-key').val(key);
-        $('#mr-comment-target-mesid').val(mesId);
-        $('#mr-comment-title').val(dbItem.commentTitle || "");
-        $('#mr-comment-text').val(dbItem.commentText || "");
-
-        $('#mr-modal-comment').css('display', 'flex');
-    });
-
-    $('#mr-save-comment').on('click', () => {
-        const key = $('#mr-comment-target-key').val();
-        const mesId = $('#mr-comment-target-mesid').val();
-        const title = $('#mr-comment-title').val();
-        const text = $('#mr-comment-text').val();
-        const snip = getContext().chat[mesId].mes.replace(/<[^>]*>?/gm, '').substring(0, 50);
-
-        if (!text) { alert('กรุณาใส่รายละเอียด!'); return; }
-
-        if (!reactionsDB[key]) reactionsDB[key] = { key, mesIndex: mesId, snippet: snip, saveTime: Date.now() };
-        reactionsDB[key].commentTitle = title;
-        reactionsDB[key].commentText = text;
-        saveDB();
-
-        $(`.comment-btn[data-key="${key}"] i`).removeClass('fa-regular').addClass('fa-solid');
-        $('#mr-modal-comment').hide();
-        if ($('#mr-modal-fav').is(':visible')) renderFavs();
-    });
-
-    $(document).on('click', '.mr-warp-btn', function() {
-        const el = $(`.mes[mesid="${$(this).attr('data-mesid')}"]`);
-        if (el.length > 0) {
-            $('#mr-modal-fav').hide();
-            el[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-            el.css('background', 'rgba(255,75,75,0.2)');
-            setTimeout(() => el.css('background', ''), 1000);
-        }
-    });
-
-    $(document).on('click', '.mr-edit-btn', function() {
-        const box = $(this).closest('.mr-fav-item');
-        box.find('.mr-custom-title').hide();
-        box.find('.mr-title-edit-box').css('display', 'flex');
-    });
-
-    $(document).on('click', '.mr-save-icon', function() {
-        const key = $(this).attr('data-key');
-        const type = $(this).attr('data-type');
-        const val = $(this).siblings('.mr-edit-input').val();
-
-        if (type === 'like') reactionsDB[key].customTitle = val;
-        if (type === 'comment') reactionsDB[key].commentTitle = val;
-
-        saveDB();
-        renderFavs();
-    });
-
-    $(document).on('click', '.mr-delete-btn', function() {
-        if(confirm("ลบรายการนี้?")) {
-            const key = $(this).attr('data-key');
-            const tab = $(this).attr('data-tab');
-
-            if (tab === 'likes') {
-                reactionsDB[key].is_favorited = false;
-                $(`.heart-btn[data-key="${key}"] i`).removeClass('fa-solid active-heart').addClass('fa-regular');
-            } else {
-                reactionsDB[key].commentText = "";
-                reactionsDB[key].commentTitle = "";
-                $(`.comment-btn[data-key="${key}"] i`).removeClass('fa-solid').addClass('fa-regular');
-            }
-
-            if (!reactionsDB[key].is_favorited && !reactionsDB[key].commentText) delete reactionsDB[key];
-
-            saveDB();
-            renderFavs();
-        }
-    });
-});
-            <div id="mr-overlay-comment" class="mr-fullscreen-overlay">
-                <div class="mr-modal-box" style="height: 60vh;">
-                    <div class="mr-modal-header">
-                        <span>เขียนคอมเมนต์</span>
-                    </div>
-                    <div class="mr-modal-content">
-                        <div class="mr-comment-form">
-                            <input type="hidden" id="mr-comment-target-key">
-                            <input type="hidden" id="mr-comment-target-mesid">
-
-                            <label class="mr-comment-label">หัวข้อ (ไม่ใส่ก็ได้):</label>
-                            <input type="text" id="mr-comment-title" class="mr-input-style" placeholder="ตั้งชื่อหัวข้อ...">
-
-                            <label class="mr-comment-label">รายละเอียด:</label>
-                            <textarea id="mr-comment-text" class="mr-comment-textarea" placeholder="พิมพ์ความรู้สึกของคุณที่นี่..."></textarea>
-
-                            <div class="mr-comment-actions">
-                                <button id="mr-cancel-comment" class="mr-btn mr-btn-cancel">ยกเลิก</button>
-                                <button id="mr-save-comment" class="mr-btn mr-btn-save">บันทึก</button>
+                const html = `
+                    <div class="mr-fav-item" data-key="${item.key}" data-mesid="${item.mesIndex}">
+                        <div class="mr-item-top">
+                            <div class="mr-fav-header">ข้อความที่ ${item.mesIndex} • ${dateStr}</div>
+                            <div class="mr-item-actions">
+                                <i class="fa-solid fa-rocket mr-warp-btn" data-mesid="${item.mesIndex}" title="วาร์ปไปข้อความนี้"></i>
+                                ${currentTab === 'likes' ? `<i class="fa-solid fa-pencil mr-edit-title-icon" title="แก้ไขชื่อ"></i>` : ''}
+                                <i class="fa-solid fa-trash-can mr-delete-btn" data-key="${item.key}" title="ลบ"></i>
                             </div>
                         </div>
+                        ${contentDisplay}
+                        <div class="mr-title-edit-container">
+                            <input type="text" class="mr-fav-title-input" value="${item.customTitle || ''}" placeholder="ตั้งชื่อความทรงจำ...">
+                            <i class="fa-solid fa-check mr-save-title-btn" data-key="${item.key}"></i>
+                        </div>
+                        <div class="mr-fav-snippet">"${snippetText}"</div>
                     </div>
-                </div>
-            </div>
-        `;
-        $('body').append(uiHtml); // ฝังที่ body ตรงๆ บังเลเยอร์ ST มิดแน่นอน
-
-        // ผูก Event ปิดหน้าต่าง
-        $('#mr-close-fav').on('click', () => $('#mr-overlay-fav').hide());
-        $('#mr-cancel-comment').on('click', () => $('#mr-overlay-comment').hide());
-
-        // ผูก Event สลับแท็บ
-        $(document).on('click', '.mr-tab-btn', function() {
-            $('.mr-tab-btn').removeClass('active');
-            $(this).addClass('active');
-            currentTab = $(this).attr('data-tab');
-            renderFavs();
+                `;
+                body.append(html);
+            } catch (err) {
+                console.error("[Message Reactions] Error rendering item:", err);
+            }
         });
     }
 }
 
 // ==========================================
-// 2. ระบบวาดรายการโปรด
+// 4. Process Messages
 // ==========================================
-function renderFavs() {
-    const charId = getContext().characterId;
-    const box = $('#mr-content-fav');
-    box.empty();
+function processMessage(mesId) {
+    const context = getContext();
+    const chatData = context.chat;
+    if (!chatData || !chatData[mesId] || chatData[mesId].is_user) return;
 
-    let items = [];
-    if (currentTab === 'likes') {
-        items = Object.keys(reactionsDB).filter(k => k.startsWith(charId + '_') && reactionsDB[k].is_favorited).map(k => reactionsDB[k]);
-    } else {
-        items = Object.keys(reactionsDB).filter(k => k.startsWith(charId + '_') && reactionsDB[k].commentText).map(k => reactionsDB[k]);
-    }
+    const msgElement = $(`.mes[mesid="${mesId}"]`);
+    if (msgElement.find('.msg-reaction-container').length > 0) return;
 
-    if (items.length === 0) {
-        box.append('<div style="text-align:center; opacity:0.5; padding: 20px;">ไม่มีข้อมูลในหมวดนี้</div>');
-        return;
-    }
+    const uniqueKey = `${context.characterId || "unknown"}_${mesId}`;
+    const isFavorited = reactionsDB[uniqueKey]?.is_favorited || false;
+    const heartClass = isFavorited ? 'fa-solid active-heart' : 'fa-regular';
 
-    items.sort((a,b) => b.saveTime - a.saveTime).forEach(item => {
-        const dStr = new Date(item.saveTime).toLocaleString('th-TH');
-
-        let contentHtml = '';
-        if (currentTab === 'likes') {
-            // โชว์หัวข้อที่ตั้งเอง (ถ้ามี) + ข้อความย่อ
-            const titleHtml = item.customTitle ? `<div class="mr-custom-title">${item.customTitle}</div>` : '';
-            contentHtml = `
-                ${titleHtml}
-                <div class="mr-title-edit-box">
-                    <input type="text" class="mr-input-style mr-edit-input" value="${item.customTitle || ''}" placeholder="ตั้งชื่อหัวข้อ...">
-                    <i class="fa-solid fa-check mr-save-icon" data-key="${item.key}" data-type="like"></i>
-                </div>
-                <div class="mr-fav-snippet">"${item.snippet}"</div>
-            `;
-        } else {
-            // โชว์หัวข้อคอมเมนต์ + เนื้อหาคอมเมนต์
-            const titleHtml = item.commentTitle ? `<div class="mr-custom-title">${item.commentTitle}</div>` : '';
-            contentHtml = `
-                ${titleHtml}
-                <div class="mr-title-edit-box">
-                    <input type="text" class="mr-input-style mr-edit-input" value="${item.commentTitle || ''}" placeholder="แก้ไขหัวข้อ...">
-                    <i class="fa-solid fa-check mr-save-icon" data-key="${item.key}" data-type="comment"></i>
-                </div>
-                <div style="padding: 10px; background: rgba(0,0,0,0.5); border-radius: 5px; margin-top: 5px;">${item.commentText.replace(/\n/g, '<br>')}</div>
-            `;
-        }
-
-        box.append(`
-            <div class="mr-fav-item">
-                <div class="mr-item-top">
-                    <div class="mr-fav-header">ข้อความที่ ${item.mesIndex} • ${dStr}</div>
-                    <div class="mr-item-actions">
-                        <i class="fa-solid fa-rocket mr-warp-btn" data-mesid="${item.mesIndex}" title="วาร์ป"></i>
-                        <i class="fa-solid fa-pencil mr-edit-btn" title="แก้ไขหัวข้อ"></i>
-                        <i class="fa-solid fa-trash-can mr-delete-btn" data-key="${item.key}" data-tab="${currentTab}" title="ลบ"></i>
-                    </div>
-                </div>
-                ${contentHtml}
+    const btnHtml = `
+        <div class="msg-reaction-container" style="display: flex; gap: 8px; margin-top: 5px; padding-left: 10px;">
+            <div class="reaction-btn heart-btn" title="Like" data-key="${uniqueKey}" data-mesid="${mesId}">
+                <i class="fa-heart ${heartClass}"></i>
             </div>
-        `);
-    });
-}
-
-// ==========================================
-// 3. แทรกปุ่มในแชท
-// ==========================================
-function processMsg(mesId) {
-    const chat = getContext().chat;
-    if (!chat || !chat[mesId] || chat[mesId].is_user) return;
-
-    const el = $(`.mes[mesid="${mesId}"]`);
-    if (el.find('.msg-reaction-container').length > 0) return;
-
-    const key = `${getContext().characterId}_${mesId}`;
-    const isFav = reactionsDB[key]?.is_favorited;
-    const hClass = isFav ? 'fa-solid active-heart' : 'fa-regular';
-
-    // เช็คว่ามีคอมเมนต์ไหม จะได้โชว์ไอคอนเขียวๆ
-    const hasComment = reactionsDB[key]?.commentText ? 'fa-solid' : 'fa-regular';
-
-    el.find('.mes_text').after(`
-        <div class="msg-reaction-container" style="display: flex; gap: 10px; margin-top: 5px;">
-            <div class="reaction-btn heart-btn" data-key="${key}" data-mesid="${mesId}"><i class="fa-heart ${hClass}"></i></div>
-            <div class="reaction-btn comment-btn" data-key="${key}" data-mesid="${mesId}"><i class="fa-comment ${hasComment}"></i></div>
-            <div class="reaction-btn view-fav-btn"><i class="fa-solid fa-book-bookmark"></i></div>
+            <div class="reaction-btn comment-btn" title="Comment" data-key="${uniqueKey}" data-mesid="${mesId}">
+                <i class="fa-solid fa-comment"></i>
+            </div>
+            <div class="reaction-btn view-fav-btn" title="ดูรายการที่บันทึกไว้">
+                <i class="fa-solid fa-book-bookmark"></i>
+            </div>
         </div>
-    `);
+    `;
+    msgElement.find('.mes_text').after(btnHtml);
 }
 
-function scanChat() {
-    const chat = getContext().chat;
-    if (chat) for (let i=0; i<chat.length; i++) processMsg(i);
+function processAllMessages() {
+    const context = getContext();
+    if (!context.chat) return;
+    for (let i = 0; i < context.chat.length; i++) processMessage(i);
 }
 
 // ==========================================
-// 4. การทำงานหลัก (Events)
+// 5. Main Init
 // ==========================================
 jQuery(async () => {
-    loadDB();
+    console.log(`[${extensionName}] Loading... (Final Version with Comment Popup)`);
+    loadReactions();
     setTimeout(injectUI, 1000);
 
-    eventSource.on(event_types.CHAT_CHANGED, scanChat);
-    eventSource.on(event_types.MESSAGE_RECEIVED, (id) => setTimeout(() => processMsg(id), 100));
-    eventSource.on(event_types.MESSAGE_UPDATED, (id) => setTimeout(() => processMsg(id), 100));
+    eventSource.on(event_types.CHAT_CHANGED, processAllMessages);
+    eventSource.on(event_types.MESSAGE_RECEIVED, (mesId) => setTimeout(() => processMessage(mesId), 100));
+    eventSource.on(event_types.MESSAGE_UPDATED, (mesId) => setTimeout(() => processMessage(mesId), 100));
 
-    // --- กดหัวใจ ---
+    // Event: กดหัวใจ
     $(document).on('click', '.heart-btn', function() {
-        const key = $(this).attr('data-key');
-        const mesId = $(this).attr('data-mesid');
-        const snip = getContext().chat[mesId].mes.replace(/<[^>]*>?/gm, '').substring(0, 50);
-
-        if (!reactionsDB[key]) reactionsDB[key] = { key, mesIndex: mesId, snippet: snip, saveTime: Date.now() };
-
         const icon = $(this).find('i');
+        const uniqueKey = $(this).attr('data-key');
+        const mesId = $(this).attr('data-mesid');
+        const chatData = getContext().chat[mesId];
+        if(!chatData || !chatData.mes) return;
+
+        const snippet = chatData.mes.replace(/<[^>]*>?/gm, '').substring(0, 50) + "...";
+
+        if (!reactionsDB[uniqueKey]) {
+            reactionsDB[uniqueKey] = { key: uniqueKey, mesIndex: mesId, snippet: snippet, saveTime: Date.now(), customTitle: "", has_comment: false };
+        }
+
         if (icon.hasClass('fa-regular')) {
             icon.removeClass('fa-regular').addClass('fa-solid active-heart');
-            reactionsDB[key].is_favorited = true;
-        } else {
-            icon.removeClass('fa-solid active-heart').addClass('fa-regular');
-            reactionsDB[key].is_favorited = false;
-        }
-        saveDB();
-    });
-
-    // --- กดดูสมุด (เปิดเต็มจอ) ---
-    $(document).on('click', '.view-fav-btn', () => {
-        $('#mr-overlay-fav').css('display', 'flex');
-        renderFavs();
-    });
-
-    // --- กดคอมเมนต์ (เปิดกล่องเขียน) ---
-    $(document).on('click', '.comment-btn', function() {
-        const key = $(this).attr('data-key');
-        const mesId = $(this).attr('data-mesid');
-        const dbItem = reactionsDB[key] || {};
-
-        $('#mr-comment-target-key').val(key);
-        $('#mr-comment-target-mesid').val(mesId);
-        $('#mr-comment-title').val(dbItem.commentTitle || "");
-        $('#mr-comment-text').val(dbItem.commentText || "");
-
-        $('#mr-overlay-comment').css('display', 'flex');
-    });
-
-    // --- เซฟคอมเมนต์ ---
-    $('#mr-save-comment').on('click', () => {
-        const key = $('#mr-comment-target-key').val();
-        const mesId = $('#mr-comment-target-mesid').val();
-        const title = $('#mr-comment-title').val();
-        const text = $('#mr-comment-text').val();
-        const snip = getContext().chat[mesId].mes.replace(/<[^>]*>?/gm, '').substring(0, 50);
-
-        if (!text) { alert('กรุณาใส่รายละเอียดคอมเมนต์!'); return; }
-
-        if (!reactionsDB[key]) reactionsDB[key] = { key, mesIndex: mesId, snippet: snip, saveTime: Date.now() };
-        reactionsDB[key].commentTitle = title;
-        reactionsDB[key].commentText = text;
-        saveDB();
-
-        $(`.comment-btn[data-key="${key}"] i`).removeClass('fa-regular').addClass('fa-solid');
-        $('#mr-overlay-comment').hide();
-        if ($('#mr-overlay-fav').is(':visible')) renderFavs();
-    });
-
-    // --- ระบบวาร์ป, ดินสอ, เซฟชื่อ, ลบ ---
-    $(document).on('click', '.mr-warp-btn', function() {
-        const el = $(`.mes[mesid="${$(this).attr('data-mesid')}"]`);
-        if (el.length > 0) {
-            $('#mr-overlay-fav').hide();
-            el[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-            el.css('background', 'rgba(255,75,75,0.2)');
-            setTimeout(() => el.css('background', ''), 1000);
-        }
-    });
-
-    $(document).on('click', '.mr-edit-btn', function() {
-        const box = $(this).closest('.mr-fav-item');
-        box.find('.mr-custom-title').hide();
-        box.find('.mr-title-edit-box').css('display', 'flex');
-    });
-
-    $(document).on('click', '.mr-save-icon', function() {
-        const key = $(this).attr('data-key');
-        const type = $(this).attr('data-type');
-        const val = $(this).siblings('.mr-edit-input').val();
-
-        if (type === 'like') reactionsDB[key].customTitle = val;
-        if (type === 'comment') reactionsDB[key].commentTitle = val;
-
-        saveDB();
-        renderFavs();
-    });
-
-    $(document).on('click', '.mr-delete-btn', function() {
-        if(confirm("ลบรายการนี้?")) {
-            const key = $(this).attr('data-key');
-            const tab = $(this).attr('data-tab');
-
-            if (tab === 'likes') {
-                reactionsDB[key].is_favorited = false;
-                $(`.heart-btn[data-key="${key}"] i`).removeClass('fa-solid active-heart').addClass('fa-regular');
-            } else {
-                reactionsDB[key].commentText = "";
-                reactionsDB[key].commentTitle = "";
-                $(`.comment-btn[data-key="${key}"] i`).removeClass('fa-solid').addClass('fa-regular');
-            }
-
-            // ถ้าว่างทั้งคู่ ค่อยลบทิ้ง
-            if (!reactionsDB[key].is_favorited && !reactionsDB[key].commentText) delete reactionsDB[key];
-
-            saveDB();
-            renderFavs();
-        }
-    });
-});
-'fa-solid active-heart');
             $(this).addClass('pop-anim');
             setTimeout(() => $(this).removeClass('pop-anim'), 300);
             reactionsDB[uniqueKey].is_favorited = true;
+            reactionsDB[uniqueKey].saveTime = Date.now();
         } else {
             icon.removeClass('fa-solid active-heart').addClass('fa-regular');
             reactionsDB[uniqueKey].is_favorited = false;
         }
 
         saveReactions();
-
         if ($('#mr-modal').is(':visible') && currentTab === 'likes') renderModal();
     });
 
-    // ระบบตรวจจับการกดปุ่มคอมเมนต์ (เพิ่มใหม่)
+    // Event: กดปุ่มคอมเมนต์ (เปิด Popup)
     $(document).on('click', '.comment-btn', function() {
-        const mesId = $(this).attr('data-mesid');
-        // ตอนนี้ใส่แค่ให้มันแจ้งเตือนก่อนว่ากดติด
-        toastr.info(`ปุ่มคอมเมนต์ของข้อความที่ ${mesId} ทำงานแล้ว! กำลังสร้างระบบเต็มรูปแบบ...`, "Message Reactions");
+        activeCommentKey = $(this).attr('data-key');
+        activeCommentMesId = $(this).attr('data-mesid');
+
+        // เคลียร์ช่องกรอกข้อมูล
+        $('#mr-input-comment-title').val('');
+        $('#mr-input-comment-detail').val('');
+
+        // ดึงข้อมูลเก่ามาแสดงถ้าเคยคอมเมนต์ไว้
+        if(reactionsDB[activeCommentKey] && reactionsDB[activeCommentKey].has_comment) {
+            $('#mr-input-comment-title').val(reactionsDB[activeCommentKey].comment_title || '');
+            $('#mr-input-comment-detail').val(reactionsDB[activeCommentKey].comment_detail || '');
+        }
+
+        $('#mr-comment-modal').css('display', 'flex');
     });
 
-    // ระบบตรวจจับการกดปุ่มดูรายการโปรด
-    $(document).on('click', '.view-fav-btn', () => {
+    // Event: กดปุ่มดูรายการโปรด (ปุ่มหนังสือ)
+    $(document).on('click', '.view-fav-btn', function() {
+        // บังคับเปิดแท็บ likes เป็นค่าเริ่มต้น
         currentTab = 'likes';
         $('.mr-tab-btn').removeClass('active');
         $('.mr-tab-btn[data-tab="likes"]').addClass('active');
+
         $('#mr-modal').css('display', 'flex');
         renderModal();
     });

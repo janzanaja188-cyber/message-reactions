@@ -3,9 +3,9 @@
     "js": "index.js",
     "css": "style.css",
     "author": "SillyTavern Architect",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "auto_update": true,
     "homePage": "",
     "requires": [],
-    "description": "เพิ่มปุ่มกดหัวใจ คอมเมนต์ และสมุดความจำท้ายข้อความของ NPC (รองรับ Mobile 100%)"
+    "description": "บันทึกความทรงจำและคอมเมนต์ท้ายข้อความ NPC (ดีไซน์ iOS Glassmorphism รองรับมือถือสมบูรณ์)"
 }

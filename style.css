@@ -27,7 +27,6 @@
     text-shadow: 0 0 5px rgba(255, 75, 75, 0.5);
 }
 
-/* ปุ่มดูรายการโปรด */
 .view-fav-btn {
     color: var(--SmartThemeQuoteColor);
 }
@@ -42,80 +41,7 @@
     animation: pop 0.3s ease-out;
 }
 
-/* --- ส่วนหน้าต่างรายการโปรด (คงเดิม) --- */
-#mr-modal {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 90%;
-    max-width: 400px;
-    max-height: 80vh;
-    background: var(--SmartThemeBlurTintColor);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--SmartThemeBorderColor);
-    border-radius: 10px;
-    z-index: 2147483647;
-    display: none;
-    flex-direction: column;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-}
-
-#mr-modal-header {
-    padding: 15px;
-    border-bottom: 1px solid var(--SmartThemeBorderColor);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-weight: bold;
-}
-
-#mr-close-btn {
-    cursor: pointer;
-    color: #ff4b4b;
-    font-size: 1.2em;
-}
-
-#mr-modal-body {
-    padding: 15px;
-    overflow-y: auto;
-    flex-grow: 1;
-}
-
-.mr-fav-item {
-    background: rgba(0,0,0,0.2);
-    padding: 10px;
-    border-radius: 8px;
-    margin-bottom: 10px;
-    position: relative;
-}
-
-.mr-fav-header {
-    font-size: 0.8em;
-    opacity: 0.7;
-    margin-bottom: 5px;
-}
-
-.mr-fav-title-input {
-    width: 100%;
-    background: transparent;
-    border: none;
-    border-bottom: 1px dashed var(--SmartThemeBorderColor);
-    color: var(--SmartThemeBodyColor);
-    font-weight: bold;
-    margin-bottom: 5px;
-    outline: none;
-}
-
-.mr-fav-snippet {
-    font-size: 0.9em;
-    font-style: italic;
-    opacity: 0.8;
-}
-
-/* ... (ส่วนปุ่มใต้ข้อความ คงเดิม) ... */
-
-/* --- แก้ไขหน้าต่างรายการโปรด (กันทะลุขอบ) --- */
+/* --- แก้ไขหน้าต่างรายการโปรด (กันทะลุขอบ & มีระบบแท็บ) --- */
 #mr-modal {
     position: fixed;
     top: 50%;
@@ -132,7 +58,7 @@
     display: none;
     flex-direction: column;
     box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-    overflow: hidden; /* ไม่ให้เนื้อหาล้นทะลุกรอบ */
+    overflow: hidden; /* ไม่ให้เนื้อหาล้นกรอบ */
 }
 
 #mr-modal-header {
@@ -145,11 +71,18 @@
     background: rgba(0,0,0,0.1);
 }
 
-/* --- ระบบแท็บ --- */
+#mr-close-btn {
+    cursor: pointer;
+    color: #ff4b4b;
+    font-size: 1.2em;
+}
+
+/* ระบบแท็บ */
 .mr-tabs {
     display: flex;
     border-bottom: 1px solid var(--SmartThemeBorderColor);
 }
+
 .mr-tab-btn {
     flex: 1;
     padding: 10px;
@@ -158,6 +91,7 @@
     opacity: 0.5;
     transition: all 0.2s;
 }
+
 .mr-tab-btn.active {
     opacity: 1;
     border-bottom: 2px solid #ff4b4b;
@@ -167,7 +101,7 @@
 
 #mr-modal-body {
     padding: 15px;
-    overflow-y: auto; /* ให้เลื่อนสกอร์บาร์ได้ถ้าเนื้อหาเยอะ */
+    overflow-y: auto; /* เลื่อนไถดูเนื้อหาได้ */
     flex-grow: 1;
 }
 
@@ -179,7 +113,6 @@
     position: relative;
 }
 
-/* --- ส่วนหัวของแต่ละรายการ --- */
 .mr-item-top {
     display: flex;
     justify-content: space-between;
@@ -192,16 +125,23 @@
     opacity: 0.7;
 }
 
-/* ไอคอนดินสอและปุ่มจัดการ */
+/* ไอคอนดินสอ */
 .mr-item-actions {
     display: flex;
     gap: 10px;
     opacity: 0.5;
 }
-.mr-item-actions i { cursor: pointer; transition: opacity 0.2s; }
-.mr-item-actions i:hover { opacity: 1; color: var(--SmartThemeQuoteColor); }
 
-/* ชื่อที่ตั้งเอง */
+.mr-item-actions i {
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.mr-item-actions i:hover {
+    opacity: 1;
+    color: var(--SmartThemeQuoteColor);
+}
+
 .mr-custom-title {
     font-weight: bold;
     color: var(--SmartThemeQuoteColor);
@@ -209,13 +149,14 @@
     display: block;
 }
 
-/* ช่องพิมพ์ชื่อ (ซ่อนไว้ก่อน) */
 .mr-title-edit-container {
-    display: none;
+    display: none; /* ซ่อนช่องพิมพ์ไว้ตอนแรก */
     margin-bottom: 5px;
+    align-items: center;
 }
+
 .mr-fav-title-input {
-    width: calc(100% - 30px);
+    flex-grow: 1;
     background: rgba(0,0,0,0.3);
     border: 1px solid var(--SmartThemeBorderColor);
     color: var(--SmartThemeBodyColor);
@@ -223,10 +164,16 @@
     border-radius: 4px;
     outline: none;
 }
+
 .mr-save-title-btn {
     cursor: pointer;
     color: #4CAF50;
-    margin-left: 5px;
+    margin-left: 8px;
+    padding: 5px;
 }
 
-.mr-fav-snippet { font-size: 0.9em; font-style: italic; opacity: 0.8; }
+.mr-fav-snippet {
+    font-size: 0.9em;
+    font-style: italic;
+    opacity: 0.8;
+}

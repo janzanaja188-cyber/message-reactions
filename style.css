@@ -112,3 +112,121 @@
     font-style: italic;
     opacity: 0.8;
 }
+
+/* ... (ส่วนปุ่มใต้ข้อความ คงเดิม) ... */
+
+/* --- แก้ไขหน้าต่างรายการโปรด (กันทะลุขอบ) --- */
+#mr-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 450px;
+    max-height: 80vh; /* บังคับความสูงไม่ให้เกิน 80% ของหน้าจอ */
+    background: var(--SmartThemeBlurTintColor);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 10px;
+    z-index: 2147483647;
+    display: none;
+    flex-direction: column;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    overflow: hidden; /* ไม่ให้เนื้อหาล้นทะลุกรอบ */
+}
+
+#mr-modal-header {
+    padding: 15px;
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    background: rgba(0,0,0,0.1);
+}
+
+/* --- ระบบแท็บ --- */
+.mr-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+}
+.mr-tab-btn {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: all 0.2s;
+}
+.mr-tab-btn.active {
+    opacity: 1;
+    border-bottom: 2px solid #ff4b4b;
+    font-weight: bold;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+#mr-modal-body {
+    padding: 15px;
+    overflow-y: auto; /* ให้เลื่อนสกอร์บาร์ได้ถ้าเนื้อหาเยอะ */
+    flex-grow: 1;
+}
+
+.mr-fav-item {
+    background: rgba(0,0,0,0.2);
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    position: relative;
+}
+
+/* --- ส่วนหัวของแต่ละรายการ --- */
+.mr-item-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.mr-fav-header {
+    font-size: 0.8em;
+    opacity: 0.7;
+}
+
+/* ไอคอนดินสอและปุ่มจัดการ */
+.mr-item-actions {
+    display: flex;
+    gap: 10px;
+    opacity: 0.5;
+}
+.mr-item-actions i { cursor: pointer; transition: opacity 0.2s; }
+.mr-item-actions i:hover { opacity: 1; color: var(--SmartThemeQuoteColor); }
+
+/* ชื่อที่ตั้งเอง */
+.mr-custom-title {
+    font-weight: bold;
+    color: var(--SmartThemeQuoteColor);
+    margin-bottom: 5px;
+    display: block;
+}
+
+/* ช่องพิมพ์ชื่อ (ซ่อนไว้ก่อน) */
+.mr-title-edit-container {
+    display: none;
+    margin-bottom: 5px;
+}
+.mr-fav-title-input {
+    width: calc(100% - 30px);
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--SmartThemeBorderColor);
+    color: var(--SmartThemeBodyColor);
+    padding: 5px;
+    border-radius: 4px;
+    outline: none;
+}
+.mr-save-title-btn {
+    cursor: pointer;
+    color: #4CAF50;
+    margin-left: 5px;
+}
+
+.mr-fav-snippet { font-size: 0.9em; font-style: italic; opacity: 0.8; }

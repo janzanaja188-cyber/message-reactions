@@ -8,7 +8,7 @@ let activeCommentKey = null;
 let activeCommentMesId = null;
 
 // ==========================================
-// 1. Database
+// 1. ระบบฐานข้อมูล
 // ==========================================
 function loadReactions() {
     const saved = localStorage.getItem(`${extensionName}_db`);
@@ -20,7 +20,7 @@ function saveReactions() {
 }
 
 // ==========================================
-// 2. Inject UI (Main Modal & Comment Popup)
+// 2. สร้าง UI ลงในหน้าเว็บ
 // ==========================================
 function injectUI() {
     if (document.getElementById('mr-extension-container') === null) {
@@ -40,7 +40,7 @@ function injectUI() {
                 <div id="mr-modal-body"></div>
             </div>
 
-            <!-- Comment Popup Modal -->
+            <!-- Comment Popup -->
             <div id="mr-comment-modal" style="display: none;">
                 <div id="mr-comment-header">เขียนคอมเมนต์</div>
                 <div id="mr-comment-body">
@@ -57,7 +57,7 @@ function injectUI() {
         const targetContainer = document.getElementById('bg_layer') || document.body;
         targetContainer.appendChild(uiContainer);
 
-        // --- Event Bindings สำหรับ Main Modal ---
+        // --- Event ของ Main Modal ---
         $(document).on('click', '#mr-close-btn', () => $('#mr-modal').hide());
 
         $(document).on('click', '.mr-tab-btn', function() {
@@ -111,7 +111,7 @@ function injectUI() {
             }
         });
 
-        // --- Event Bindings สำหรับ Comment Popup ---
+        // --- Event ของ Comment Popup ---
         $(document).on('click', '#mr-cancel-comment', function() {
             $('#mr-comment-modal').hide();
             activeCommentKey = null;
@@ -127,7 +127,9 @@ function injectUI() {
                 return;
             }
 
-            const snippet = getContext().chat[activeCommentMesId].mes.replace(/<[^>]*>?/gm, '').substring(0, 50) + "...";
+            const chatData = getContext().chat[activeCommentMesId];
+            if(!chatData) return;
+            const snippet = chatData.mes.replace(/<[^>]*>?/gm, '').substring(0, 50) + "...";
 
             if (!reactionsDB[activeCommentKey]) {
                 reactionsDB[activeCommentKey] = { key: activeCommentKey, mesIndex: activeCommentMesId, snippet: snippet, saveTime: Date.now(), customTitle: "", is_favorited: false, comment_title: "", comment_detail: "" };
@@ -147,7 +149,7 @@ function injectUI() {
 }
 
 // ==========================================
-// 3. Render Modal Data
+// 3. วาดข้อมูลลงในหน้าต่าง
 // ==========================================
 function renderModal() {
     const context = getContext();
@@ -157,17 +159,9 @@ function renderModal() {
 
     let items = [];
     if (currentTab === 'likes') {
-        if (reactionsDB) {
-             items = Object.keys(reactionsDB).filter(k => {
-                 return k.startsWith(charId + '_') && reactionsDB[k] && reactionsDB[k].is_favorited === true;
-             }).map(k => reactionsDB[k]);
-        }
+        items = Object.keys(reactionsDB).filter(k => k.startsWith(charId + '_') && reactionsDB[k] && reactionsDB[k].is_favorited === true).map(k => reactionsDB[k]);
     } else if (currentTab === 'comments') {
-        if (reactionsDB) {
-             items = Object.keys(reactionsDB).filter(k => {
-                 return k.startsWith(charId + '_') && reactionsDB[k] && reactionsDB[k].has_comment === true;
-             }).map(k => reactionsDB[k]);
-        }
+        items = Object.keys(reactionsDB).filter(k => k.startsWith(charId + '_') && reactionsDB[k] && reactionsDB[k].has_comment === true).map(k => reactionsDB[k]);
     }
 
     if (!items || items.length === 0) {
@@ -215,54 +209,7 @@ function renderModal() {
 }
 
 // ==========================================
-// 4. Process Messages
-// ==========================================
-function processMessage(mesId) {
-    const context = getContext();
-    const chatData = context.chat;
-    if (!chatData || !chatData[mesId] || chatData[mesId].is_user) return;
-
-    const msgElement = $(`.mes[mesid="${mesId}"]`);
-    if (msgElement.find('.msg-reaction-container').length > 0) return;
-
-    const uniqueKey = `${context.characterId || "unknown"}_${mesId}`;
-    const isFavorited = reactionsDB[uniqueKey]?.is_favorited || false;
-    const heartClass = isFavorited ? 'fa-solid active-heart' : 'fa-regular';
-
-    const btnHtml = `
-        <div class="msg-reaction-container" style="display: flex; gap: 8px; margin-top: 5px; padding-left: 10px;">
-            <div class="reaction-btn heart-btn" title="Like" data-key="${uniqueKey}" data-mesid="${mesId}">
-                <i class="fa-heart ${heartClass}"></i>
-            </div>
-            <div class="reaction-btn comment-btn" title="Comment" data-key="${uniqueKey}" data-mesid="${mesId}">
-                <i class="fa-solid fa-comment"></i>
-            </div>
-            <div class="reaction-btn view-fav-btn" title="ดูรายการที่บันทึกไว้">
-                <i class="fa-solid fa-book-bookmark"></i>
-            </div>
-        </div>
-    `;
-    msgElement.find('.mes_text').after(btnHtml);
-}
-
-function processAllMessages() {
-    const context = getContext();
-    if (!context.chat) return;
-    for (let i = 0; i < context.chat.length; i++) processMessage(i);
-}
-
-
-
-});
- 
-                console.error("[Message Reactions] Error rendering item:", err);
-            }
-        });
-    }
-}
-
-// ==========================================
-// 4. Process Messages
+// 4. แทรกปุ่มลงในแชท
 // ==========================================
 function processMessage(mesId) {
     const context = getContext();
@@ -299,28 +246,18 @@ function processAllMessages() {
 }
 
 // ==========================================
-// 5. Main Init (แก้ไขบั๊กปุ่มหายตอนเริ่มเกม)
+// 5. ผูก Event ทั้งหมด (Initialization)
 // ==========================================
 jQuery(async () => {
-    console.log(`[${extensionName}] Loading... (Stage 6.3: Button Visibility Fix)`);
+    console.log(`[${extensionName}] Loading... (Final Version - API Compliant)`);
     loadReactions();
+    setTimeout(injectUI, 1000);
 
-    // หน่วงเวลาให้ UI และปุ่มวาดตัวเองขึ้นมา
-    setTimeout(() => {
-        injectUI();
-        processAllMessages(); // <--- บรรทัดนี้แหละที่หายไป! สั่งให้มันวาดปุ่มทันทีที่โหลดเสร็จ
-    }, 1000);
-
-    eventSource.on(event_types.CHAT_CHANGED, () => {
-        setTimeout(processAllMessages, 500); // หน่วงเวลาตอนเปลี่ยนแชทนิดนึงกันบั๊ก
-    });
-
+    eventSource.on(event_types.CHAT_CHANGED, processAllMessages);
     eventSource.on(event_types.MESSAGE_RECEIVED, (mesId) => setTimeout(() => processMessage(mesId), 100));
     eventSource.on(event_types.MESSAGE_UPDATED, (mesId) => setTimeout(() => processMessage(mesId), 100));
 
-    // Event: กดหัวใจ
-    $(document).on('click', '.heart-btn', function(e) {
-        e.preventDefault();
+    $(document).on('click', '.heart-btn', function() {
         const icon = $(this).find('i');
         const uniqueKey = $(this).attr('data-key');
         const mesId = $(this).attr('data-mesid');
@@ -348,9 +285,7 @@ jQuery(async () => {
         if ($('#mr-modal').is(':visible') && currentTab === 'likes') renderModal();
     });
 
-    // Event: กดปุ่มคอมเมนต์
-    $(document).on('click', '.comment-btn', function(e) {
-        e.preventDefault();
+    $(document).on('click', '.comment-btn', function() {
         activeCommentKey = $(this).attr('data-key');
         activeCommentMesId = $(this).attr('data-mesid');
 
@@ -365,9 +300,7 @@ jQuery(async () => {
         $('#mr-comment-modal').css('display', 'flex');
     });
 
-    // Event: กดปุ่มดูรายการโปรด (ปุ่มหนังสือ)
-    $(document).on('click touchstart', '.view-fav-btn', function(e) {
-        e.preventDefault();
+    $(document).on('click', '.view-fav-btn', function() {
         currentTab = 'likes';
         $('.mr-tab-btn').removeClass('active');
         $('.mr-tab-btn[data-tab="likes"]').addClass('active');

@@ -249,10 +249,10 @@ function processAllMessages() {
 }
 
 // ==========================================
-// 5. Main Init
+// 5. Main Init (แก้ไข Event ปุ่มสมุด)
 // ==========================================
 jQuery(async () => {
-    console.log(`[${extensionName}] Loading... (Final Version with Comment Popup)`);
+    console.log(`[${extensionName}] Loading... (Stage 6.2: Mobile Click Fix)`);
     loadReactions();
     setTimeout(injectUI, 1000);
 
@@ -261,7 +261,8 @@ jQuery(async () => {
     eventSource.on(event_types.MESSAGE_UPDATED, (mesId) => setTimeout(() => processMessage(mesId), 100));
 
     // Event: กดหัวใจ
-    $(document).on('click', '.heart-btn', function() {
+    $(document).on('click', '.heart-btn', function(e) {
+        e.preventDefault(); // ป้องกันการทำงานซ้ำซ้อน
         const icon = $(this).find('i');
         const uniqueKey = $(this).attr('data-key');
         const mesId = $(this).attr('data-mesid');
@@ -289,16 +290,15 @@ jQuery(async () => {
         if ($('#mr-modal').is(':visible') && currentTab === 'likes') renderModal();
     });
 
-    // Event: กดปุ่มคอมเมนต์ (เปิด Popup)
-    $(document).on('click', '.comment-btn', function() {
+    // Event: กดปุ่มคอมเมนต์
+    $(document).on('click', '.comment-btn', function(e) {
+        e.preventDefault();
         activeCommentKey = $(this).attr('data-key');
         activeCommentMesId = $(this).attr('data-mesid');
 
-        // เคลียร์ช่องกรอกข้อมูล
         $('#mr-input-comment-title').val('');
         $('#mr-input-comment-detail').val('');
 
-        // ดึงข้อมูลเก่ามาแสดงถ้าเคยคอมเมนต์ไว้
         if(reactionsDB[activeCommentKey] && reactionsDB[activeCommentKey].has_comment) {
             $('#mr-input-comment-title').val(reactionsDB[activeCommentKey].comment_title || '');
             $('#mr-input-comment-detail').val(reactionsDB[activeCommentKey].comment_detail || '');
@@ -306,6 +306,24 @@ jQuery(async () => {
 
         $('#mr-comment-modal').css('display', 'flex');
     });
+
+    // Event: กดปุ่มดูรายการโปรด (ปุ่มหนังสือ) - รองรับมือถือ
+    $(document).on('click touchstart', '.view-fav-btn', function(e) {
+        e.preventDefault(); // ป้องกันการกดทะลุ
+
+        console.log(`[${extensionName}] Book button clicked!`); // แจ้งเตือนใน Console ว่ากดติดจริง
+
+        currentTab = 'likes';
+        $('.mr-tab-btn').removeClass('active');
+        $('.mr-tab-btn[data-tab="likes"]').addClass('active');
+
+        // บังคับให้หน้าต่างแสดงผล
+        $('#mr-modal').css('display', 'flex');
+
+        // วาดข้อมูล
+        renderModal();
+    });
+});
 
     // Event: กดปุ่มดูรายการโปรด (ปุ่มหนังสือ)
     $(document).on('click', '.view-fav-btn', function() {

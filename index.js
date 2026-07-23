@@ -18,7 +18,6 @@ function saveStorage() {
     SillyTavern.getContext().saveSettingsDebounced();
 }
 
-// สร้าง Unique ID จากตัวละคร + Chat + Message ID
 function getRecordId(mesId) {
     const context = SillyTavern.getContext();
     const charId = context.characterId || 'group';
@@ -26,13 +25,11 @@ function getRecordId(mesId) {
     return `${charId}_${chatId}_${mesId}`;
 }
 
-// สร้าง Record ใหม่
 function createNewRecord(mesId) {
     const context = SillyTavern.getContext();
     const chat = context.chat;
     const mes = chat[mesId];
     
-    // สร้าง Snippet โดยลบ HTML tags ออกเพื่อความสะอาด
     let snippet = mes.mes.replace(/<[^>]*>?/gm, '').trim();
     snippet = snippet.length > 80 ? snippet.substring(0, 80) + '...' : snippet;
 
@@ -50,7 +47,52 @@ function createNewRecord(mesId) {
 }
 
 /**
- * 2. DOM Injection (แทรกปุ่ม)
+ * 2. HTML Templates Injection (แก้ปัญหาโฟลเดอร์ไม่ตรงและโหลด Template ไม่ขึ้น)
+ */
+function injectModals() {
+    if (document.getElementById('st-mm-main-modal')) return; // ป้องกันการสร้างซ้ำ
+
+    const modalsHTML = `
+        <!-- Main Book Modal -->
+        <div id="st-mm-main-modal" class="st-mm-modal-overlay" style="display: none;">
+            <div class="st-mm-modal-content st-ios-panel">
+                <div class="st-mm-modal-header">
+                    <h2>📖 ความทรงจำ</h2>
+                    <button class="st-mm-close-btn" id="st-mm-close-main"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="st-mm-tabs">
+                    <button class="st-mm-tab active" data-tab="hearts">❤️ ที่กดใจ</button>
+                    <button class="st-mm-tab" data-tab="comments">💬 คอมเมนต์</button>
+                </div>
+                <div class="st-mm-list-container ios-scroll" id="st-mm-list-container">
+                    <!-- Items injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Comment Modal -->
+        <div id="st-mm-comment-modal" class="st-mm-modal-overlay" style="display: none;">
+            <div class="st-mm-modal-content st-mm-comment-box st-ios-panel">
+                <div class="st-mm-modal-header">
+                    <h2>💬 เขียนคอมเมนต์</h2>
+                </div>
+                <div class="st-mm-modal-body">
+                    <input type="text" id="st-mm-comment-title" class="st-ios-input" placeholder="หัวข้อ (ไม่บังคับ)" autocomplete="off" />
+                    <textarea id="st-mm-comment-detail" class="st-ios-input ios-scroll" placeholder="คิดอะไรอยู่... พิมพ์เลย!" rows="4"></textarea>
+                    <input type="hidden" id="st-mm-comment-mesid" />
+                </div>
+                <div class="st-mm-modal-footer">
+                    <button id="st-mm-comment-cancel" class="st-mm-btn-ios-secondary">ยกเลิก</button>
+                    <button id="st-mm-comment-save" class="st-mm-btn-ios-primary">บันทึก</button>
+                </div>
+            </div>
+        </div>
+    `;
+    $('body').append(modalsHTML);
+}
+
+/**
+ * 3. DOM Injection (แทรกปุ่มท้ายข้อความ)
  */
 function injectButtons(mesId) {
     const context = SillyTavern.getContext();
@@ -59,14 +101,11 @@ function injectButtons(mesId) {
     if (!chat || !chat[mesId]) return;
     const mes = chat[mesId];
 
-    // ข้อกำหนด: แทรกเฉพาะข้อความของ NPC ห้ามแทรกข้อความ User หรือ System
     if (mes.is_user || mes.is_system) return;
 
-    // หา DOM Block
     const mesBlock = document.querySelector(`.mes[mesid="${mesId}"] .mes_block`);
     if (!mesBlock) return;
 
-    // ถ้ามีปุ่มอยู่แล้ว ไม่ต้องแทรกซ้ำ
     if (mesBlock.querySelector('.st-mm-button-container')) {
         updateSingleButtonUI(mesId);
         return;
@@ -87,7 +126,6 @@ function injectButtons(mesId) {
         </div>
     `;
 
-    // แทรกต่อท้ายกล่องข้อความ
     const mesText = mesBlock.querySelector('.mes_text');
     if (mesText) {
         mesText.insertAdjacentElement('afterend', container);
@@ -95,7 +133,6 @@ function injectButtons(mesId) {
         mesBlock.appendChild(container);
     }
 
-    // อัปเดตสถานะสีปุ่ม
     updateSingleButtonUI(mesId);
 }
 
@@ -125,30 +162,16 @@ function updateSingleButtonUI(mesId) {
 }
 
 /**
- * 3. Modal Logic & Rendering
+ * 4. Rendering List
  */
-async function loadModals() {
-    const context = SillyTavern.getContext();
-    // โหลด Template ที่เราสร้างไว้มาต่อท้าย body
-    const mainModalHtml = await context.renderExtensionTemplateAsync('third-party/st-message-memory', 'main-modal', {});
-    const commentModalHtml = await context.renderExtensionTemplateAsync('third-party/st-message-memory', 'comment-modal', {});
-    
-    $('body').append(mainModalHtml);
-    $('body').append(commentModalHtml);
-
-    attachModalListeners();
-}
-
 function renderMemoryList(activeTab) {
     const context = SillyTavern.getContext();
     const currentChatId = context.chatId || 'no_chat';
     const container = $('#st-mm-list-container');
     container.empty();
 
-    // ดึงข้อมูลเฉพาะแชทปัจจุบัน
     const records = Object.values(memoryData).filter(r => r.chatId === currentChatId);
     
-    // กรองตาม Tab
     const filtered = records.filter(r => {
         if (activeTab === 'hearts') return r.isHeart;
         if (activeTab === 'comments') return r.comment && r.comment.trim() !== "";
@@ -156,11 +179,10 @@ function renderMemoryList(activeTab) {
     });
 
     if (filtered.length === 0) {
-        container.append(`<div class="st-mm-empty">ไม่มีรายการในหมวดหมู่นี้</div>`);
+        container.append(`<div class="st-mm-empty"><i class="fa-solid fa-ghost"></i><br>ยังไม่มีความทรงจำในหน้านี้เลย!</div>`);
         return;
     }
 
-    // เรียงจากใหม่ไปเก่า
     filtered.sort((a, b) => b.timestamp - a.timestamp);
 
     filtered.forEach(r => {
@@ -168,13 +190,14 @@ function renderMemoryList(activeTab) {
             day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' 
         });
         
+        // Use ST's built-in DOMPurify
         const displayTitle = r.title ? DOMPurify.sanitize(r.title) : `ข้อความที่ ${r.mesId}`;
         const safeSnippet = DOMPurify.sanitize(r.snippet);
         const safeComment = r.comment ? DOMPurify.sanitize(r.comment) : '';
         const hasCommentHTML = r.comment ? `<div class="st-mm-item-comment-text">💬 ${safeComment}</div>` : '';
 
         const itemHtml = `
-            <div class="st-mm-list-item">
+            <div class="st-mm-list-item ios-card">
                 <div class="st-mm-item-header">
                     <div class="st-mm-item-title-group">
                         <span class="st-mm-item-title">${displayTitle}</span>
@@ -182,8 +205,8 @@ function renderMemoryList(activeTab) {
                     </div>
                     <div class="st-mm-item-actions">
                         <button class="st-mm-action-btn st-mm-edit-btn" data-id="${r.id}" title="แก้ไขหัวข้อ"><i class="fa-solid fa-pencil"></i></button>
-                        <button class="st-mm-action-btn st-mm-warp-btn" data-mesid="${r.mesId}" title="ไปที่ข้อความ"><i class="fa-solid fa-rocket"></i></button>
-                        <button class="st-mm-action-btn st-mm-delete-btn" data-id="${r.id}" data-mesid="${r.mesId}" title="ลบรายการ"><i class="fa-solid fa-trash"></i></button>
+                        <button class="st-mm-action-btn st-mm-warp-btn" data-mesid="${r.mesId}" title="ไปที่ข้อความ"><i class="fa-solid fa-location-arrow"></i></button>
+                        <button class="st-mm-action-btn st-mm-delete-btn" data-id="${r.id}" data-mesid="${r.mesId}" title="ลบรายการ"><i class="fa-solid fa-trash-can"></i></button>
                     </div>
                 </div>
                 <div class="st-mm-item-snippet">"${safeSnippet}"</div>
@@ -195,30 +218,35 @@ function renderMemoryList(activeTab) {
 }
 
 /**
- * 4. Event Listeners
+ * 5. Event Listeners & FIX BUGS
  */
 function attachModalListeners() {
     const context = SillyTavern.getContext();
 
-    // -- Chat Screen Buttons --
+    // --- Fix: หยุด SillyTavern ไม่ให้แย่งคีย์บอร์ดตอนพิมพ์คอมเมนต์ ---
+    $('#st-mm-comment-title, #st-mm-comment-detail').on('keydown keyup keypress', function(e) {
+        e.stopPropagation(); // บล็อก ST's global key handler
+    });
+    // -----------------------------------------------------------
+
+    // -- Inline Buttons in Chat --
     $('#chat').on('click', '.st-mm-heart', function() {
         const mesId = $(this).data('mesid');
         const recordId = getRecordId(mesId);
         
-        if (!memoryData[recordId]) {
-            memoryData[recordId] = createNewRecord(mesId);
-        }
+        if (!memoryData[recordId]) memoryData[recordId] = createNewRecord(mesId);
         
         const record = memoryData[recordId];
         record.isHeart = !record.isHeart; 
         
-        // ถ้าเอาหัวใจออกและไม่มีคอมเมนต์ ลบทิ้งเพื่อประหยัดพื้นที่
-        if (!record.isHeart && !record.comment) {
-            delete memoryData[recordId];
-        }
+        if (!record.isHeart && !record.comment) delete memoryData[recordId];
         
         saveStorage();
         updateSingleButtonUI(mesId);
+        
+        // Pop animation for heart
+        $(this).addClass('pop-anim');
+        setTimeout(() => $(this).removeClass('pop-anim'), 300);
     });
 
     $('#chat').on('click', '.st-mm-comment', function() {
@@ -234,19 +262,20 @@ function attachModalListeners() {
             $('#st-mm-comment-detail').val("");
         }
         
-        $('#st-mm-comment-modal').fadeIn(200);
+        $('#st-mm-comment-modal').css('display', 'flex').hide().fadeIn(250);
+        $('#st-mm-comment-detail').focus(); // Auto focus
     });
 
     $('#chat').on('click', '.st-mm-book', function() {
         $('.st-mm-tab').removeClass('active');
         $('.st-mm-tab[data-tab="hearts"]').addClass('active');
         renderMemoryList('hearts');
-        $('#st-mm-main-modal').fadeIn(200);
+        $('#st-mm-main-modal').css('display', 'flex').hide().fadeIn(250);
     });
 
-    // -- Comment Modal --
+    // -- Comment Modal Buttons --
     $('#st-mm-close-comment, #st-mm-comment-cancel').on('click', function() {
-        $('#st-mm-comment-modal').fadeOut(200);
+        $('#st-mm-comment-modal').fadeOut(250);
     });
 
     $('#st-mm-comment-save').on('click', function() {
@@ -255,27 +284,25 @@ function attachModalListeners() {
         const title = $('#st-mm-comment-title').val().trim();
         
         if (!detail) {
-            toastr.warning("กรุณากรอกรายละเอียดคอมเมนต์");
+            toastr.warning("พิมพ์อะไรสักหน่อยสิ!");
             return;
         }
 
         const recordId = getRecordId(mesId);
-        if (!memoryData[recordId]) {
-            memoryData[recordId] = createNewRecord(mesId);
-        }
+        if (!memoryData[recordId]) memoryData[recordId] = createNewRecord(mesId);
         
         memoryData[recordId].comment = detail;
         memoryData[recordId].title = title;
         
         saveStorage();
         updateSingleButtonUI(mesId);
-        $('#st-mm-comment-modal').fadeOut(200);
-        toastr.success("บันทึกคอมเมนต์สำเร็จ");
+        $('#st-mm-comment-modal').fadeOut(250);
+        toastr.success("✨ บันทึกคอมเมนต์เรียบร้อย!");
     });
 
-    // -- Main Modal --
+    // -- Main Modal Buttons --
     $('#st-mm-close-main').on('click', function() {
-        $('#st-mm-main-modal').fadeOut(200);
+        $('#st-mm-main-modal').fadeOut(250);
     });
 
     $('.st-mm-tab').on('click', function() {
@@ -289,7 +316,7 @@ function attachModalListeners() {
         const record = memoryData[id];
         if (!record) return;
 
-        const newTitle = await context.Popup.show.input("ตั้งชื่อหัวข้อความทรงจำ:", record.title);
+        const newTitle = await context.Popup.show.input("ตั้งชื่อหัวข้อใหม่:", record.title);
         if (newTitle !== null) {
             record.title = newTitle;
             saveStorage();
@@ -302,16 +329,14 @@ function attachModalListeners() {
         const target = $(`.mes[mesid="${mesId}"]`);
         
         if (target.length) {
-            $('#st-mm-main-modal').fadeOut(200);
+            $('#st-mm-main-modal').fadeOut(250);
             target[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
             
-            const originalBg = target.css('backgroundColor');
-            target.css('backgroundColor', 'var(--SmartThemeQuoteColor)');
-            setTimeout(() => {
-                target.css('backgroundColor', originalBg);
-            }, 1500);
+            // Cute blink effect
+            target.addClass('ios-blink');
+            setTimeout(() => target.removeClass('ios-blink'), 2000);
         } else {
-            toastr.warning("โหลดข้อความไม่ถึง หรือข้อความถูกลบไปแล้ว");
+            toastr.warning("เลื่อนไปไม่ถึง! ข้อความอาจถูกลบหรืออยู่ลึกเกินไป");
         }
     });
 
@@ -319,26 +344,27 @@ function attachModalListeners() {
         const id = $(this).data('id');
         const mesId = $(this).data('mesid');
         
-        const confirmStr = await context.Popup.show.confirm("ยืนยันการลบ", "คุณต้องการลบรายการนี้ใช่หรือไม่?");
+        const confirmStr = await context.Popup.show.confirm("ลบความทรงจำ?", "แน่ใจนะว่าจะลบทิ้ง? กู้คืนไม่ได้แล้วนะ");
         if (confirmStr) {
             delete memoryData[id];
             saveStorage();
             renderMemoryList($('.st-mm-tab.active').data('tab'));
             updateSingleButtonUI(mesId);
-            toastr.success("ลบรายการสำเร็จ");
+            toastr.success("🗑️ ลบทิ้งเรียบร้อย");
         }
     });
 }
 
 /**
- * 5. Lifecycle Hooks
+ * 6. Lifecycle Hooks
  */
 jQuery(async function () {
     const context = SillyTavern.getContext();
     
-    context.eventSource.on(context.event_types.APP_READY, async () => {
+    context.eventSource.on(context.event_types.APP_READY, () => {
         initStorage();
-        await loadModals();
+        injectModals();
+        attachModalListeners();
         injectAllMessages();
     });
 

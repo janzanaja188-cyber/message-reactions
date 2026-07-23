@@ -3,6 +3,7 @@ import { eventSource, event_types } from "../../../../script.js";
 
 const extensionName = "message-reactions";
 let reactionsDB = {};
+let currentAvatarUrl = "";
 
 function loadReactions() {
     const saved = localStorage.getItem(`${extensionName}_db`);
@@ -13,60 +14,124 @@ function saveReactions() {
     localStorage.setItem(`${extensionName}_db`, JSON.stringify(reactionsDB));
 }
 
-// ฝังปุ่มลงในแถบเมนูด้านบนของ ST
-function injectTopMenuButton() {
-    // เช็คว่ามีปุ่มเราอยู่หรือยัง
-    if ($('#mr-top-menu-btn').length === 0) {
-
-        // สร้างปุ่มรูปหัวใจ (ใช้คลาสมาตรฐานของ ST ให้ดูกลมกลืน)
-        const topBtnHtml = `
-            <div id="mr-top-menu-btn" class="menu_button" title="รายการโปรด (Reactions)" style="display: flex; align-items: center; justify-content: center; position: relative;">
-                <i class="fa-solid fa-heart" style="color: #ff4b4b;"></i>
-                <div id="mr-top-badge" style="position: absolute; top: -5px; right: -5px; background: white; color: #ff4b4b; border-radius: 50%; padding: 2px 4px; font-size: 9px; font-weight: bold; display: none;">0</div>
-            </div>
-        `;
-
-        // แปะเข้าไปในแถบเมนูขวาบน (ข้างๆ ปุ่มสามขีด)
-        if ($('#rm_button_group').length) {
-            $('#rm_button_group').prepend(topBtnHtml);
-        } else if ($('#top-bar').length) {
-            $('#top-bar').append(topBtnHtml);
-        }
-
-        // โครงสร้างหน้าต่างรายการโปรด (Modal)
-        const modalHtml = `
-            <div id="mr-modal" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 400px; max-height: 80vh; background: rgba(20, 20, 25, 0.95); backdrop-filter: blur(10px); border: 1px solid #444; border-radius: 10px; z-index: 99999; display: none; flex-direction: column; color: white; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
-                <div style="padding: 15px; border-bottom: 1px solid #444; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-weight: bold; font-size: 1.1em;"><i class="fa-solid fa-heart" style="color:#ff4b4b;"></i> ความทรงจำที่บันทึกไว้</span>
-                    <i id="mr-close-btn" class="fa-solid fa-xmark" style="cursor: pointer; color: #aaa; font-size: 1.2em;"></i>
-                </div>
-                <div id="mr-modal-body" style="padding: 15px; overflow-y: auto; flex-grow: 1;"></div>
-            </div>
-        `;
-
-        $('body').append(modalHtml);
-
-        // ผูก Event เปิด/ปิด หน้าต่าง
-        $(document).on('click', '#mr-top-menu-btn', renderModal);
-        $(document).on('click', '#mr-close-btn', () => $('#mr-modal').hide());
-
-        console.log(`[${extensionName}] Top Menu Button Injected.`);
-    }
-}
-
-// อัปเดตตัวเลขแจ้งเตือนบนปุ่มแถบเมนู
-function updateTopBadge() {
+function updateFloatingBtn() {
     const context = getContext();
-    if (!context.chatId) return;
+    if (!context.chatId) {
+        $('#mr-floating-btn').hide();
+        return;
+    }
+
+    $('#mr-floating-btn').show();
+
+    if (context.characterId && context.characters[context.characterId]) {
+        currentAvatarUrl = `/characters/${context.characters[context.characterId].avatar}`;
+        $('#mr-floating-btn').css('background-image', `url('${currentAvatarUrl}')`);
+    }
 
     const charId = context.characterId;
     let count = Object.keys(reactionsDB).filter(k => k.startsWith(charId + '_') && reactionsDB[k].is_favorited).length;
 
     if (count > 0) {
-        $('#mr-top-badge').text(count).show();
+        $('#mr-badge').text(count).show();
     } else {
-        $('#mr-top-badge').hide();
+        $('#mr-badge').hide();
     }
+}
+
+function injectUI() {
+    if (document.getElementById('mr-floating-btn') === null) {
+        const uiContainer = document.createElement('div');
+        uiContainer.id = "mr-extension-container";
+        uiContainer.innerHTML = `
+            <div id="mr-floating-btn" style="display: none;">
+                <div id="mr-badge" style="display: none;">0</div>
+            </div>
+            <div id="mr-modal" style="display: none;">
+                <div id="mr-modal-header">
+                    <span>รายการโปรด</span>
+                    <i id="mr-close-btn" class="fa-solid fa-xmark" style="cursor: pointer;"></i>
+                </div>
+                <div id="mr-modal-body"></div>
+            </div>
+        `;
+
+        const targetContainer = document.getElementById('bg_layer') || document.body;
+        targetContainer.appendChild(uiContainer);
+
+        setupDraggable();
+
+        $(document).on('click', '#mr-floating-btn', function(e) {
+            if (!$(this).hasClass('is-dragging')) {
+                renderModal();
+            }
+        });
+
+        $(document).on('click', '#mr-close-btn', function() {
+            $('#mr-modal').hide();
+        });
+
+        console.log(`[${extensionName}] UI Injected into ${targetContainer.id || 'body'}`);
+    }
+}
+
+function setupDraggable() {
+    const btn = document.getElementById('mr-floating-btn');
+    let isDragging = false;
+    let startX, startY, initialX, initialY;
+    let moved = false;
+
+    const startDrag = (e) => {
+        isDragging = true;
+        moved = false;
+        const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+        const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+        startX = clientX;
+        startY = clientY;
+        initialX = btn.offsetLeft;
+        initialY = btn.offsetTop;
+        btn.style.transition = 'none';
+    };
+
+    const doDrag = (e) => {
+        if (!isDragging) return;
+        const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+        const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+
+        const dx = clientX - startX;
+        const dy = clientY - startY;
+
+        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+            moved = true;
+            $(btn).addClass('is-dragging');
+        }
+
+        let newX = initialX + dx;
+        let newY = initialY + dy;
+
+        const maxX = window.innerWidth - btn.offsetWidth;
+        const maxY = window.innerHeight - btn.offsetHeight;
+        newX = Math.max(0, Math.min(newX, maxX));
+        newY = Math.max(0, Math.min(newY, maxY));
+
+        btn.style.left = newX + 'px';
+        btn.style.top = newY + 'px';
+        btn.style.right = 'auto';
+        btn.style.bottom = 'auto';
+    };
+
+    const stopDrag = (e) => {
+        isDragging = false;
+        btn.style.transition = 'all 0.2s';
+        setTimeout(() => $(btn).removeClass('is-dragging'), 50);
+    };
+
+    btn.addEventListener('mousedown', startDrag);
+    document.addEventListener('mousemove', doDrag);
+    document.addEventListener('mouseup', stopDrag);
+
+    btn.addEventListener('touchstart', startDrag, {passive: true});
+    document.addEventListener('touchmove', doDrag, {passive: false});
+    document.addEventListener('touchend', stopDrag);
 }
 
 function renderModal() {
@@ -80,20 +145,19 @@ function renderModal() {
         .map(k => reactionsDB[k]);
 
     if (favs.length === 0) {
-        body.append('<p style="text-align:center; opacity:0.5; margin-top: 20px;">ยังไม่ได้บันทึกข้อความใดๆ ในแชทนี้</p>');
+        body.append('<p style="text-align:center; opacity:0.5;">ยังไม่มีข้อความโปรด</p>');
     } else {
         favs.forEach(fav => {
             const html = `
-                <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 12px; border-left: 3px solid #ff4b4b;">
-                    <div style="font-size: 0.75em; opacity: 0.6; margin-bottom: 8px;">ข้อความที่ ${fav.mesIndex} • ${new Date(fav.saveTime).toLocaleString()}</div>
-                    <input type="text" class="mr-fav-title-input" data-key="${fav.key}" placeholder="ตั้งชื่อให้ข้อความนี้..." value="${fav.customTitle || ''}" style="width: 100%; background: transparent; border: none; border-bottom: 1px solid #666; color: #fff; margin-bottom: 8px; outline: none; font-weight: bold; padding-bottom: 4px;">
-                    <div style="font-size: 0.9em; font-style: italic; opacity: 0.8; line-height: 1.4;">"${fav.snippet}"</div>
+                <div class="mr-fav-item">
+                    <div class="mr-fav-header">ข้อความที่ ${fav.mesIndex} • ${new Date(fav.saveTime).toLocaleString()}</div>
+                    <input type="text" class="mr-fav-title-input" data-key="${fav.key}" placeholder="ตั้งชื่อความทรงจำ..." value="${fav.customTitle || ''}">
+                    <div class="mr-fav-snippet">"${fav.snippet}"</div>
                 </div>
             `;
             body.append(html);
         });
 
-        // ระบบเซฟชื่อ
         $('.mr-fav-title-input').on('input', function() {
             const key = $(this).attr('data-key');
             reactionsDB[key].customTitle = $(this).val();
@@ -107,7 +171,8 @@ function renderModal() {
 function processMessage(mesId) {
     const context = getContext();
     const chatData = context.chat;
-    if (!chatData || !chatData[mesId] || chatData[mesId].is_user) return;
+    if (!chatData || !chatData[mesId]) return;
+    if (chatData[mesId].is_user) return;
 
     const msgElement = $(`.mes[mesid="${mesId}"]`);
     if (msgElement.find('.msg-reaction-container').length > 0) return;
@@ -119,8 +184,8 @@ function processMessage(mesId) {
     const heartClass = isFavorited ? 'fa-solid active-heart' : 'fa-regular';
 
     const btnHtml = `
-        <div class="msg-reaction-container" style="display: flex; gap: 8px; margin-top: 5px; padding-left: 10px; opacity: 0.8;">
-            <div class="reaction-btn heart-btn" title="บันทึกข้อความ" data-key="${uniqueKey}" data-mesid="${mesId}" style="cursor: pointer;">
+        <div class="msg-reaction-container" style="display: flex; gap: 8px; margin-top: 5px; padding-left: 10px;">
+            <div class="reaction-btn heart-btn" title="Like" data-key="${uniqueKey}" data-mesid="${mesId}">
                 <i class="fa-heart ${heartClass}"></i>
             </div>
         </div>
@@ -133,23 +198,31 @@ function processAllMessages() {
     const context = getContext();
     if (!context.chat) return;
     for (let i = 0; i < context.chat.length; i++) processMessage(i);
-    updateTopBadge();
+    updateFloatingBtn();
 }
 
 jQuery(async () => {
-    console.log(`[${extensionName}] Loading... (Stage 5: Top Menu Integration)`);
+    console.log(`[${extensionName}] Loading... (Final Version)`);
 
     loadReactions();
 
-    // รอแป๊บนึงให้แถบเมนูด้านบนของ ST โหลดเสร็จก่อน
     setTimeout(() => {
-        injectTopMenuButton();
-        updateTopBadge();
-    }, 1500);
+        injectUI();
+        updateFloatingBtn();
+    }, 1000);
 
-    eventSource.on(event_types.CHAT_CHANGED, processAllMessages);
-    eventSource.on(event_types.MESSAGE_RECEIVED, (mesId) => { setTimeout(() => { processMessage(mesId); updateTopBadge(); }, 100); });
-    eventSource.on(event_types.MESSAGE_UPDATED, (mesId) => { setTimeout(() => processMessage(mesId), 100); });
+    eventSource.on(event_types.CHAT_CHANGED, () => {
+        processAllMessages();
+        setTimeout(updateFloatingBtn, 500);
+    });
+
+    eventSource.on(event_types.MESSAGE_RECEIVED, (mesId) => {
+        setTimeout(() => { processMessage(mesId); updateFloatingBtn(); }, 100);
+    });
+
+    eventSource.on(event_types.MESSAGE_UPDATED, (mesId) => {
+        setTimeout(() => processMessage(mesId), 100);
+    });
 
     $(document).on('click', '.heart-btn', function() {
         const icon = $(this).find('i');
@@ -158,7 +231,7 @@ jQuery(async () => {
 
         const context = getContext();
         const msgText = context.chat[mesId].mes;
-        const snippet = msgText.replace(/<[^>]*>?/gm, '').substring(0, 60) + "...";
+        const snippet = msgText.replace(/<[^>]*>?/gm, '').substring(0, 50) + "...";
 
         if (!reactionsDB[uniqueKey]) {
             reactionsDB[uniqueKey] = {
@@ -172,19 +245,12 @@ jQuery(async () => {
 
         if (icon.hasClass('fa-regular')) {
             icon.removeClass('fa-regular').addClass('fa-solid active-heart');
-            icon.css('color', '#ff4b4b');
+            $(this).addClass('pop-anim');
+            setTimeout(() => $(this).removeClass('pop-anim'), 300);
             reactionsDB[uniqueKey].is_favorited = true;
         } else {
             icon.removeClass('fa-solid active-heart').addClass('fa-regular');
-            icon.css('color', '');
             reactionsDB[uniqueKey].is_favorited = false;
-        }
-
-        saveReactions();
-        updateTopBadge();
-    });
-});
-is_favorited = false;
         }
 
         saveReactions();

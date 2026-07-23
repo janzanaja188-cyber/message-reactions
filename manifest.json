@@ -1,11 +1,12 @@
+// path: public/scripts/extensions/third-party/st-message-memory/manifest.json
 {
-    "display_name": "Message Reactions",
+    "display_name": "Message Reactions & Memory",
     "js": "index.js",
     "css": "style.css",
     "author": "SillyTavern Architect",
-    "version": "1.1.0",
+    "version": "1.4.1",
     "auto_update": true,
     "homePage": "",
     "requires": [],
-    "description": "บันทึกความทรงจำและคอมเมนต์ท้ายข้อความ NPC (ดีไซน์ iOS Glassmorphism รองรับมือถือสมบูรณ์)"
+    "description": "ระบบบันทึกความทรงจำและแสดงความคิดเห็นท้ายข้อความตัวละคร (จัดปุ่มกึ่งกลางข้อความ กดง่าย ไม่ทับซ้อน)"
 }

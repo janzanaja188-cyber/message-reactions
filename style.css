@@ -1,23 +1,59 @@
 /* ========================================= */
-/* --- ส่วนปุ่มท้ายข้อความ --- */
+/* --- ส่วนที่ 1: ปุ่มรีแอคชันท้ายข้อความ --- */
 /* ========================================= */
-.msg-reaction-container { opacity: 0.7; transition: opacity 0.2s ease-in-out; }
-.mes:hover .msg-reaction-container { opacity: 1; }
-.reaction-btn { cursor: pointer; padding: 6px; border-radius: 50%; background: rgba(0, 0, 0, 0.05); color: var(--SmartThemeBodyColor); transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; }
-.active-heart { color: #ff4b4b !important; text-shadow: 0 0 5px rgba(255, 75, 75, 0.5); }
-.view-fav-btn { color: var(--SmartThemeQuoteColor); }
-.comment-btn { color: #4CAF50; }
+.msg-reaction-container {
+    opacity: 0.7;
+    transition: opacity 0.2s ease-in-out;
+}
 
-@keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.4); } 100% { transform: scale(1); } }
-.pop-anim { animation: pop 0.3s ease-out; }
+.mes:hover .msg-reaction-container {
+    opacity: 1;
+}
+
+.reaction-btn {
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--SmartThemeBodyColor);
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+}
+
+.active-heart {
+    color: #ff4b4b !important;
+    text-shadow: 0 0 5px rgba(255, 75, 75, 0.5);
+}
+
+.view-fav-btn {
+    color: var(--SmartThemeQuoteColor);
+}
+
+.comment-btn {
+    color: #4CAF50;
+}
+
+@keyframes pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.4); }
+    100% { transform: scale(1); }
+}
+
+.pop-anim {
+    animation: pop 0.3s ease-out;
+}
 
 /* ========================================= */
-/* --- หน้าต่างรายการโปรด (Main Modal) --- */
+/* --- ส่วนที่ 2: หน้าต่างรายการโปรด (Main Modal) --- */
 /* ========================================= */
 #mr-modal {
     position: fixed;
-    top: 10vh; /* ห่างจากขอบบน 10% เสมอ */
-    bottom: 10vh;
+    top: 5vh;
+    bottom: 5vh;
     left: 5vw;
     right: 5vw;
     width: auto;
@@ -30,40 +66,149 @@
     z-index: 2147483647;
     display: none;
     flex-direction: column;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
     overflow: hidden;
 }
 
-#mr-modal-header { padding: 15px; border-bottom: 1px solid var(--SmartThemeBorderColor); display: flex; justify-content: space-between; align-items: center; font-weight: bold; background: rgba(0,0,0,0.2); }
-#mr-close-btn { cursor: pointer; color: #ff4b4b; font-size: 1.5em; padding: 5px; }
+#mr-modal-header {
+    padding: 15px;
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    background: rgba(0,0,0,0.2);
+}
 
-.mr-tabs { display: flex; border-bottom: 1px solid var(--SmartThemeBorderColor); }
-.mr-tab-btn { flex: 1; padding: 12px; text-align: center; cursor: pointer; opacity: 0.5; transition: all 0.2s; }
-.mr-tab-btn.active { opacity: 1; border-bottom: 3px solid #ff4b4b; font-weight: bold; background: rgba(255, 255, 255, 0.05); }
+#mr-close-btn {
+    cursor: pointer;
+    color: #ff4b4b;
+    font-size: 1.5em;
+    padding: 5px;
+}
 
-#mr-modal-body { padding: 15px; overflow-y: auto; flex-grow: 1; padding-bottom: 30px; }
+/* ========================================= */
+/* --- ส่วนที่ 3: ระบบแท็บในหน้าต่าง --- */
+/* ========================================= */
+.mr-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+}
 
-.mr-fav-item { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px; position: relative; border: 1px solid transparent; }
-.mr-item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-.mr-fav-header { font-size: 0.8em; opacity: 0.7; }
-.mr-item-actions { display: flex; gap: 12px; opacity: 0.7; }
-.mr-item-actions i { cursor: pointer; transition: color 0.2s; font-size: 1.1em; }
+.mr-tab-btn {
+    flex: 1;
+    padding: 12px;
+    text-align: center;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: all 0.2s;
+}
+
+.mr-tab-btn.active {
+    opacity: 1;
+    border-bottom: 3px solid #ff4b4b;
+    font-weight: bold;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+#mr-modal-body {
+    padding: 15px;
+    overflow-y: auto;
+    flex-grow: 1;
+    padding-bottom: 30px;
+}
+
+/* ========================================= */
+/* --- ส่วนที่ 4: รายการข้อความที่บันทึกไว้ --- */
+/* ========================================= */
+.mr-fav-item {
+    background: rgba(0,0,0,0.2);
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    position: relative;
+    border: 1px solid transparent;
+}
+
+.mr-fav-item:hover {
+    border-color: var(--SmartThemeQuoteColor);
+}
+
+.mr-item-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.mr-fav-header {
+    font-size: 0.8em;
+    opacity: 0.7;
+}
+
+.mr-item-actions {
+    display: flex;
+    gap: 12px;
+    opacity: 0.7;
+}
+
+.mr-item-actions i {
+    cursor: pointer;
+    transition: color 0.2s;
+    font-size: 1.1em;
+}
+
 .mr-edit-title-icon:hover { color: #4CAF50; }
 .mr-warp-btn:hover { color: #2196F3; }
 .mr-delete-btn:hover { color: #ff4b4b; }
 
-.mr-custom-title { font-weight: bold; color: var(--SmartThemeQuoteColor); margin-bottom: 5px; display: block; font-size: 1.1em; }
-.mr-title-edit-container { display: none; margin-bottom: 5px; align-items: center; gap: 5px; }
-.mr-fav-title-input { flex-grow: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--SmartThemeBorderColor); color: var(--SmartThemeBodyColor); padding: 8px; border-radius: 4px; outline: none; }
-.mr-save-title-btn { cursor: pointer; color: #4CAF50; padding: 5px; font-size: 1.2em; }
-.mr-fav-snippet { font-size: 0.9em; font-style: italic; opacity: 0.8; padding-top: 5px; border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; }
+.mr-custom-title {
+    font-weight: bold;
+    color: var(--SmartThemeQuoteColor);
+    margin-bottom: 5px;
+    display: block;
+    font-size: 1.1em;
+}
+
+.mr-title-edit-container {
+    display: none;
+    margin-bottom: 5px;
+    align-items: center;
+    gap: 5px;
+}
+
+.mr-fav-title-input {
+    flex-grow: 1;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--SmartThemeBorderColor);
+    color: var(--SmartThemeBodyColor);
+    padding: 8px;
+    border-radius: 4px;
+    outline: none;
+}
+
+.mr-save-title-btn {
+    cursor: pointer;
+    color: #4CAF50;
+    padding: 5px;
+    font-size: 1.2em;
+}
+
+.mr-fav-snippet {
+    font-size: 0.9em;
+    font-style: italic;
+    opacity: 0.8;
+    padding-top: 5px;
+    border-top: 1px dashed rgba(255,255,255,0.1);
+    margin-top: 5px;
+}
 
 /* ========================================= */
-/* --- หน้าต่างเขียนคอมเมนต์ (Comment Popup) --- */
+/* --- ส่วนที่ 5: หน้าต่างเขียนคอมเมนต์ (แก้ไขแล้ว) --- */
 /* ========================================= */
 #mr-comment-modal {
     position: fixed;
-    top: 15vh; /* ห่างจากขอบบน 15% เสมอ */
+    top: 15vh; /* ล็อกให้ห่างจากขอบบน 15% กันทะลุ */
     left: 5vw;
     right: 5vw;
     width: auto;
@@ -73,16 +218,71 @@
     backdrop-filter: blur(10px);
     border: 1px solid var(--SmartThemeBorderColor);
     border-radius: 10px;
-    z-index: 2147483648; /* อยู่บนสุด */
+    z-index: 2147483648;
     display: none;
     flex-direction: column;
     box-shadow: 0 10px 25px rgba(0,0,0,0.8);
 }
 
-#mr-comment-header { padding: 15px; border-bottom: 1px solid var(--SmartThemeBorderColor); font-weight: bold; text-align: center; background: rgba(0,0,0,0.2); }
-#mr-comment-body { padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-.mr-comment-input-title { width: calc(100% - 20px); background: rgba(0,0,0,0.3); border: 1px solid var(--SmartThemeBorderColor); color: var(--SmartThemeBodyColor); padding: 10px; border-radius: 5px; outline: none; }
-.mr-comment-input-detail { width: calc(100% - 20px); height: 120px; background: rgba(0,0,0,0.3); border: 1px solid var(--SmartThemeBorderColor); color: var(--SmartThemeBodyColor); padding: 10px; border-radius: 5px; outline: none; resize: none; }
-#mr-comment-footer { padding: 15px; border-top: 1px solid var(--SmartThemeBorderColor); display: flex; justify-content: flex-end; gap: 10px; }
-.mr-btn-cancel { padding: 8px 15px; border-radius: 5px; cursor: pointer; background: rgba(255, 75, 75, 0.2); color: #ff4b4b; border: 1px solid #ff4b4b; }
-.mr-btn-save { padding: 8px 15px; border-radius: 5px; cursor: pointer; background: rgba(76, 175, 80, 0.2); color: #4CAF50; border: 1px solid #4CAF50; }
+#mr-comment-header {
+    padding: 15px;
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+    font-weight: bold;
+    text-align: center;
+    background: rgba(0,0,0,0.2);
+}
+
+#mr-comment-body {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.mr-comment-input-title {
+    width: calc(100% - 20px);
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--SmartThemeBorderColor);
+    color: var(--SmartThemeBodyColor);
+    padding: 10px;
+    border-radius: 5px;
+    outline: none;
+}
+
+.mr-comment-input-detail {
+    width: calc(100% - 20px);
+    height: 120px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--SmartThemeBorderColor);
+    color: var(--SmartThemeBodyColor);
+    padding: 10px;
+    border-radius: 5px;
+    outline: none;
+    resize: none;
+}
+
+#mr-comment-footer {
+    padding: 15px;
+    border-top: 1px solid var(--SmartThemeBorderColor);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.mr-btn-cancel {
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    background: rgba(255, 75, 75, 0.2);
+    color: #ff4b4b;
+    border: 1px solid #ff4b4b;
+}
+
+.mr-btn-save {
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    background: rgba(76, 175, 80, 0.2);
+    color: #4CAF50;
+    border: 1px solid #4CAF50;
+}

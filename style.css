@@ -1,5 +1,5 @@
 /* ========================================= */
-/* --- ส่วนที่ 1: ปุ่มรีแอคชันท้ายข้อความ --- */
+/* --- 1. ปุ่มรีแอคชันท้ายข้อความ --- */
 /* ========================================= */
 .msg-reaction-container {
     opacity: 0.7;
@@ -29,13 +29,8 @@
     text-shadow: 0 0 5px rgba(255, 75, 75, 0.5);
 }
 
-.view-fav-btn {
-    color: var(--SmartThemeQuoteColor);
-}
-
-.comment-btn {
-    color: #4CAF50;
-}
+.view-fav-btn { color: var(--SmartThemeQuoteColor); }
+.comment-btn { color: #4CAF50; }
 
 @keyframes pop {
     0% { transform: scale(1); }
@@ -48,7 +43,7 @@
 }
 
 /* ========================================= */
-/* --- ส่วนที่ 2: หน้าต่างรายการโปรด (Main Modal) --- */
+/* --- 2. หน้าต่างรายการโปรด (Main Modal) --- */
 /* ========================================= */
 #mr-modal {
     position: fixed;
@@ -87,9 +82,6 @@
     padding: 5px;
 }
 
-/* ========================================= */
-/* --- ส่วนที่ 3: ระบบแท็บในหน้าต่าง --- */
-/* ========================================= */
 .mr-tabs {
     display: flex;
     border-bottom: 1px solid var(--SmartThemeBorderColor);
@@ -119,7 +111,7 @@
 }
 
 /* ========================================= */
-/* --- ส่วนที่ 4: รายการข้อความที่บันทึกไว้ --- */
+/* --- 3. รายการข้อความที่บันทึกไว้ --- */
 /* ========================================= */
 .mr-fav-item {
     background: rgba(0,0,0,0.2);
@@ -130,10 +122,6 @@
     border: 1px solid transparent;
 }
 
-.mr-fav-item:hover {
-    border-color: var(--SmartThemeQuoteColor);
-}
-
 .mr-item-top {
     display: flex;
     justify-content: space-between;
@@ -141,23 +129,9 @@
     margin-bottom: 5px;
 }
 
-.mr-fav-header {
-    font-size: 0.8em;
-    opacity: 0.7;
-}
-
-.mr-item-actions {
-    display: flex;
-    gap: 12px;
-    opacity: 0.7;
-}
-
-.mr-item-actions i {
-    cursor: pointer;
-    transition: color 0.2s;
-    font-size: 1.1em;
-}
-
+.mr-fav-header { font-size: 0.8em; opacity: 0.7; }
+.mr-item-actions { display: flex; gap: 12px; opacity: 0.7; }
+.mr-item-actions i { cursor: pointer; transition: color 0.2s; font-size: 1.1em; }
 .mr-edit-title-icon:hover { color: #4CAF50; }
 .mr-warp-btn:hover { color: #2196F3; }
 .mr-delete-btn:hover { color: #ff4b4b; }
@@ -187,28 +161,15 @@
     outline: none;
 }
 
-.mr-save-title-btn {
-    cursor: pointer;
-    color: #4CAF50;
-    padding: 5px;
-    font-size: 1.2em;
-}
-
-.mr-fav-snippet {
-    font-size: 0.9em;
-    font-style: italic;
-    opacity: 0.8;
-    padding-top: 5px;
-    border-top: 1px dashed rgba(255,255,255,0.1);
-    margin-top: 5px;
-}
+.mr-save-title-btn { cursor: pointer; color: #4CAF50; padding: 5px; font-size: 1.2em; }
+.mr-fav-snippet { font-size: 0.9em; font-style: italic; opacity: 0.8; padding-top: 5px; border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; }
 
 /* ========================================= */
-/* --- ส่วนที่ 5: หน้าต่างเขียนคอมเมนต์ (แก้ไขแล้ว) --- */
+/* --- 4. หน้าต่างเขียนคอมเมนต์ (Comment Popup) --- */
 /* ========================================= */
 #mr-comment-modal {
     position: fixed;
-    top: 15vh; /* ล็อกให้ห่างจากขอบบน 15% กันทะลุ */
+    top: 15vh; /* ล็อกไว้ที่ 15% จากขอบบน กันคีย์บอร์ดมือถือดันทะลุจอ */
     left: 5vw;
     right: 5vw;
     width: auto;
@@ -269,20 +230,5 @@
     gap: 10px;
 }
 
-.mr-btn-cancel {
-    padding: 8px 15px;
-    border-radius: 5px;
-    cursor: pointer;
-    background: rgba(255, 75, 75, 0.2);
-    color: #ff4b4b;
-    border: 1px solid #ff4b4b;
-}
-
-.mr-btn-save {
-    padding: 8px 15px;
-    border-radius: 5px;
-    cursor: pointer;
-    background: rgba(76, 175, 80, 0.2);
-    color: #4CAF50;
-    border: 1px solid #4CAF50;
-}
+.mr-btn-cancel { padding: 8px 15px; border-radius: 5px; cursor: pointer; background: rgba(255, 75, 75, 0.2); color: #ff4b4b; border: 1px solid #ff4b4b; }
+.mr-btn-save { padding: 8px 15px; border-radius: 5px; cursor: pointer; background: rgba(76, 175, 80, 0.2); color: #4CAF50; border: 1px solid #4CAF50; }

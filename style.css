@@ -1,234 +1,247 @@
-/* ========================================= */
-/* --- 1. ปุ่มรีแอคชันท้ายข้อความ --- */
-/* ========================================= */
-.msg-reaction-container {
-    opacity: 0.7;
-    transition: opacity 0.2s ease-in-out;
+/* path: public/scripts/extensions/third-party/st-message-memory/style.css */
+
+.st-mm-button-container {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 5px;
+    padding: 0 10px;
 }
 
-.mes:hover .msg-reaction-container {
-    opacity: 1;
-}
-
-.reaction-btn {
+.st-mm-btn {
+    background: transparent;
+    border: 1px solid var(--SmartThemeBorderColor, #555);
+    border-radius: 5px;
+    padding: 4px 10px;
     cursor: pointer;
-    padding: 6px;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.05);
-    color: var(--SmartThemeBodyColor);
-    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    color: var(--SmartThemeBodyColor, #ccc);
+    font-size: 0.9em;
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
 }
 
-.active-heart {
-    color: #ff4b4b !important;
-    text-shadow: 0 0 5px rgba(255, 75, 75, 0.5);
+.st-mm-btn:hover {
+    background: var(--SmartThemeBlurTintColor, rgba(255,255,255,0.1));
 }
 
-.view-fav-btn { color: var(--SmartThemeQuoteColor); }
-.comment-btn { color: #4CAF50; }
-
-@keyframes pop {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.4); }
-    100% { transform: scale(1); }
+.st-mm-btn.active-heart {
+    color: #ff4b4b;
+    border-color: #ff4b4b;
 }
 
-.pop-anim {
-    animation: pop 0.3s ease-out;
+.st-mm-btn.active-comment {
+    color: #4da6ff;
+    border-color: #4da6ff;
 }
 
-/* ========================================= */
-/* --- 2. หน้าต่างรายการโปรด (Main Modal) --- */
-/* ========================================= */
-#mr-modal {
+.st-mm-modal-overlay {
     position: fixed;
-    top: 5vh;
-    bottom: 5vh;
-    left: 5vw;
-    right: 5vw;
-    width: auto;
-    max-width: 500px;
-    margin: 0 auto;
-    background: var(--SmartThemeBlurTintColor);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--SmartThemeBorderColor);
-    border-radius: 10px;
-    z-index: 2147483647;
-    display: none;
-    flex-direction: column;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 99999;
+    display: flex;
+    justify-content: center;
+    backdrop-filter: blur(3px);
     overflow: hidden;
 }
 
-#mr-modal-header {
-    padding: 15px;
-    border-bottom: 1px solid var(--SmartThemeBorderColor);
+#st-mm-main-modal {
+    align-items: center;
+    padding: 10px;
+}
+
+.st-mm-modal-content {
+    background: var(--SmartThemeBlurTintColor, #1e1e1e);
+    border: 1px solid var(--SmartThemeBorderColor, #444);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+}
+
+.st-mm-modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-weight: bold;
-    background: rgba(0,0,0,0.2);
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--SmartThemeBorderColor, #444);
 }
 
-#mr-close-btn {
+.st-mm-modal-header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: var(--SmartThemeBodyColor);
+}
+
+.st-mm-close-btn {
+    background: none;
+    border: none;
+    color: var(--SmartThemeBodyColor);
+    font-size: 1.5rem;
     cursor: pointer;
-    color: #ff4b4b;
-    font-size: 1.5em;
-    padding: 5px;
 }
 
-.mr-tabs {
+.st-mm-tabs {
     display: flex;
-    border-bottom: 1px solid var(--SmartThemeBorderColor);
+    border-bottom: 1px solid var(--SmartThemeBorderColor, #444);
 }
 
-.mr-tab-btn {
+.st-mm-tab {
     flex: 1;
+    background: none;
+    border: none;
     padding: 12px;
-    text-align: center;
+    color: var(--SmartThemeBodyColor);
     cursor: pointer;
-    opacity: 0.5;
-    transition: all 0.2s;
-}
-
-.mr-tab-btn.active {
-    opacity: 1;
-    border-bottom: 3px solid #ff4b4b;
     font-weight: bold;
-    background: rgba(255, 255, 255, 0.05);
+    opacity: 0.6;
+    transition: opacity 0.2s;
 }
 
-#mr-modal-body {
-    padding: 15px;
+.st-mm-tab.active {
+    opacity: 1;
+    border-bottom: 3px solid #4da6ff;
+}
+
+.st-mm-list-container {
+    flex: 1;
     overflow-y: auto;
-    flex-grow: 1;
-    padding-bottom: 30px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
-/* ========================================= */
-/* --- 3. รายการข้อความที่บันทึกไว้ --- */
-/* ========================================= */
-.mr-fav-item {
-    background: rgba(0,0,0,0.2);
-    padding: 10px;
+.st-mm-empty {
+    text-align: center;
+    color: gray;
+    padding: 20px;
+}
+
+.st-mm-list-item {
+    background: rgba(255,255,255,0.05);
     border-radius: 8px;
-    margin-bottom: 10px;
-    position: relative;
-    border: 1px solid transparent;
+    padding: 12px;
+    border: 1px solid var(--SmartThemeBorderColor, #333);
 }
 
-.mr-item-top {
+.st-mm-item-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 5px;
+    align-items: flex-start;
+    margin-bottom: 8px;
 }
 
-.mr-fav-header { font-size: 0.8em; opacity: 0.7; }
-.mr-item-actions { display: flex; gap: 12px; opacity: 0.7; }
-.mr-item-actions i { cursor: pointer; transition: color 0.2s; font-size: 1.1em; }
-.mr-edit-title-icon:hover { color: #4CAF50; }
-.mr-warp-btn:hover { color: #2196F3; }
-.mr-delete-btn:hover { color: #ff4b4b; }
-
-.mr-custom-title {
-    font-weight: bold;
-    color: var(--SmartThemeQuoteColor);
-    margin-bottom: 5px;
-    display: block;
-    font-size: 1.1em;
-}
-
-.mr-title-edit-container {
-    display: none;
-    margin-bottom: 5px;
-    align-items: center;
-    gap: 5px;
-}
-
-.mr-fav-title-input {
-    flex-grow: 1;
-    background: rgba(0,0,0,0.3);
-    border: 1px solid var(--SmartThemeBorderColor);
-    color: var(--SmartThemeBodyColor);
-    padding: 8px;
-    border-radius: 4px;
-    outline: none;
-}
-
-.mr-save-title-btn { cursor: pointer; color: #4CAF50; padding: 5px; font-size: 1.2em; }
-.mr-fav-snippet { font-size: 0.9em; font-style: italic; opacity: 0.8; padding-top: 5px; border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; }
-
-/* ========================================= */
-/* --- 4. หน้าต่างเขียนคอมเมนต์ (Comment Popup) --- */
-/* ========================================= */
-#mr-comment-modal {
-    position: fixed;
-    top: 15vh; /* ล็อกไว้ที่ 15% จากขอบบน กันคีย์บอร์ดมือถือดันทะลุจอ */
-    left: 5vw;
-    right: 5vw;
-    width: auto;
-    max-width: 400px;
-    margin: 0 auto;
-    background: var(--SmartThemeBlurTintColor);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--SmartThemeBorderColor);
-    border-radius: 10px;
-    z-index: 2147483648;
-    display: none;
+.st-mm-item-title-group {
+    display: flex;
     flex-direction: column;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.8);
 }
 
-#mr-comment-header {
-    padding: 15px;
-    border-bottom: 1px solid var(--SmartThemeBorderColor);
+.st-mm-item-title {
     font-weight: bold;
-    text-align: center;
-    background: rgba(0,0,0,0.2);
+    color: var(--SmartThemeBodyColor);
+    font-size: 1rem;
 }
 
-#mr-comment-body {
+.st-mm-item-date {
+    font-size: 0.75rem;
+    color: gray;
+    margin-top: 2px;
+}
+
+.st-mm-item-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.st-mm-action-btn {
+    background: var(--SmartThemeButtonBackgroundColor, #333);
+    border: none;
+    color: var(--SmartThemeBodyColor);
+    border-radius: 4px;
+    padding: 5px 8px;
+    cursor: pointer;
+}
+
+.st-mm-item-snippet {
+    font-style: italic;
+    color: #aaa;
+    font-size: 0.85rem;
+    padding: 8px;
+    background: rgba(0,0,0,0.2);
+    border-left: 3px solid #555;
+    border-radius: 4px;
+}
+
+.st-mm-item-comment-text {
+    margin-top: 8px;
+    font-size: 0.9rem;
+    color: #4da6ff;
+}
+
+#st-mm-comment-modal {
+    align-items: flex-start;
+    padding-top: 15vh;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.st-mm-comment-box {
+    max-height: 80vh;
+}
+
+.st-mm-modal-body {
     padding: 15px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 15px;
 }
 
-.mr-comment-input-title {
-    width: calc(100% - 20px);
-    background: rgba(0,0,0,0.3);
-    border: 1px solid var(--SmartThemeBorderColor);
-    color: var(--SmartThemeBodyColor);
+.st-mm-modal-body input, .st-mm-modal-body textarea {
+    width: 100%;
+    background: var(--SmartThemeChatBackgroundColor, #121212);
+    color: var(--SmartThemeBodyColor, #fff);
+    border: 1px solid var(--SmartThemeBorderColor, #555);
+    border-radius: 6px;
     padding: 10px;
-    border-radius: 5px;
-    outline: none;
+    font-family: inherit;
 }
 
-.mr-comment-input-detail {
-    width: calc(100% - 20px);
-    height: 120px;
-    background: rgba(0,0,0,0.3);
-    border: 1px solid var(--SmartThemeBorderColor);
-    color: var(--SmartThemeBodyColor);
-    padding: 10px;
-    border-radius: 5px;
-    outline: none;
-    resize: none;
+.st-mm-modal-body textarea {
+    resize: vertical;
 }
 
-#mr-comment-footer {
-    padding: 15px;
-    border-top: 1px solid var(--SmartThemeBorderColor);
+.st-mm-modal-footer {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
+    padding: 15px;
+    border-top: 1px solid var(--SmartThemeBorderColor, #444);
 }
 
-.mr-btn-cancel { padding: 8px 15px; border-radius: 5px; cursor: pointer; background: rgba(255, 75, 75, 0.2); color: #ff4b4b; border: 1px solid #ff4b4b; }
-.mr-btn-save { padding: 8px 15px; border-radius: 5px; cursor: pointer; background: rgba(76, 175, 80, 0.2); color: #4CAF50; border: 1px solid #4CAF50; }
+.st-mm-btn-primary {
+    background: #4da6ff;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.st-mm-btn-secondary {
+    background: transparent;
+    color: var(--SmartThemeBodyColor);
+    border: 1px solid var(--SmartThemeBorderColor);
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+}

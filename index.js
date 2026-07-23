@@ -201,10 +201,10 @@ function processAllMessages() {
 }
 
 // ==========================================
-// 5. การทำงานหลัก (Main Initialization)
+// 5. การทำงานหลัก (Main Initialization) - เพิ่มปุ่มคอมเมนต์
 // ==========================================
 jQuery(async () => {
-    console.log(`[${extensionName}] Loading... (Stage 6: Final Setup)`);
+    console.log(`[${extensionName}] Loading... (Stage 6.1: Bug Fixes)`);
     loadReactions();
     setTimeout(injectUI, 1000);
 
@@ -217,7 +217,12 @@ jQuery(async () => {
         const icon = $(this).find('i');
         const uniqueKey = $(this).attr('data-key');
         const mesId = $(this).attr('data-mesid');
-        const snippet = getContext().chat[mesId].mes.replace(/<[^>]*>?/gm, '').substring(0, 50) + "...";
+        const chatData = getContext().chat[mesId];
+
+        // ป้องกันบั๊กกรณีดึงข้อความไม่ได้
+        if(!chatData || !chatData.mes) return;
+
+        const snippet = chatData.mes.replace(/<[^>]*>?/gm, '').substring(0, 50) + "...";
 
         if (!reactionsDB[uniqueKey]) {
             reactionsDB[uniqueKey] = { key: uniqueKey, mesIndex: mesId, snippet: snippet, saveTime: Date.now(), customTitle: "" };
@@ -236,6 +241,13 @@ jQuery(async () => {
         saveReactions();
 
         if ($('#mr-modal').is(':visible') && currentTab === 'likes') renderModal();
+    });
+
+    // ระบบตรวจจับการกดปุ่มคอมเมนต์ (เพิ่มใหม่)
+    $(document).on('click', '.comment-btn', function() {
+        const mesId = $(this).attr('data-mesid');
+        // ตอนนี้ใส่แค่ให้มันแจ้งเตือนก่อนว่ากดติด
+        toastr.info(`ปุ่มคอมเมนต์ของข้อความที่ ${mesId} ทำงานแล้ว! กำลังสร้างระบบเต็มรูปแบบ...`, "Message Reactions");
     });
 
     // ระบบตรวจจับการกดปุ่มดูรายการโปรด

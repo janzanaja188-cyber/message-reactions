@@ -105,7 +105,7 @@ function injectUI() {
 }
 
 // ==========================================
-// 3. ระบบวาดข้อมูลลงในหน้าต่าง
+// 3. ระบบวาดข้อมูลลงในหน้าต่าง (แก้ไขบั๊ก)
 // ==========================================
 function renderModal() {
     const context = getContext();
@@ -115,38 +115,50 @@ function renderModal() {
 
     let items = [];
     if (currentTab === 'likes') {
-        items = Object.keys(reactionsDB).filter(k => k.startsWith(charId + '_') && reactionsDB[k].is_favorited).map(k => reactionsDB[k]);
+        // เพิ่มการตรวจสอบให้แน่ใจว่า reactionsDB มีค่าและดึงข้อมูลได้จริง
+        if (reactionsDB) {
+             items = Object.keys(reactionsDB).filter(k => {
+                 return k.startsWith(charId + '_') && reactionsDB[k] && reactionsDB[k].is_favorited === true;
+             }).map(k => reactionsDB[k]);
+        }
     } else {
         body.append('<p style="text-align:center; opacity:0.5; margin-top: 20px;">ระบบคอมเมนต์กำลังก่อสร้าง...</p>');
         return;
     }
 
-    if (items.length === 0) {
+    if (!items || items.length === 0) {
         body.append('<p style="text-align:center; opacity:0.5; margin-top: 20px;">ยังไม่มีข้อมูล</p>');
     } else {
         items.sort((a,b) => b.saveTime - a.saveTime).forEach(item => {
-            const dateStr = new Date(item.saveTime).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-            const titleDisplay = item.customTitle ? `<span class="mr-custom-title">${item.customTitle}</span>` : '';
+            try {
+                // ป้องกันบั๊กกรณีข้อมูลวันหรือเวลาพัง
+                const saveTimeValue = item.saveTime || Date.now();
+                const dateStr = new Date(saveTimeValue).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                const titleDisplay = item.customTitle ? `<span class="mr-custom-title">${item.customTitle}</span>` : '';
+                const snippetText = item.snippet || "ไม่สามารถแสดงข้อความได้";
 
-            const html = `
-                <div class="mr-fav-item" data-key="${item.key}" data-mesid="${item.mesIndex}">
-                    <div class="mr-item-top">
-                        <div class="mr-fav-header">ข้อความที่ ${item.mesIndex} • ${dateStr}</div>
-                        <div class="mr-item-actions">
-                            <i class="fa-solid fa-rocket mr-warp-btn" data-mesid="${item.mesIndex}" title="วาร์ปไปข้อความนี้"></i>
-                            <i class="fa-solid fa-pencil mr-edit-title-icon" title="แก้ไขชื่อ"></i>
-                            <i class="fa-solid fa-trash-can mr-delete-btn" data-key="${item.key}" title="ลบ"></i>
+                const html = `
+                    <div class="mr-fav-item" data-key="${item.key}" data-mesid="${item.mesIndex}">
+                        <div class="mr-item-top">
+                            <div class="mr-fav-header">ข้อความที่ ${item.mesIndex} • ${dateStr}</div>
+                            <div class="mr-item-actions">
+                                <i class="fa-solid fa-rocket mr-warp-btn" data-mesid="${item.mesIndex}" title="วาร์ปไปข้อความนี้"></i>
+                                <i class="fa-solid fa-pencil mr-edit-title-icon" title="แก้ไขชื่อ"></i>
+                                <i class="fa-solid fa-trash-can mr-delete-btn" data-key="${item.key}" title="ลบ"></i>
+                            </div>
                         </div>
+                        ${titleDisplay}
+                        <div class="mr-title-edit-container">
+                            <input type="text" class="mr-fav-title-input" value="${item.customTitle || ''}" placeholder="ตั้งชื่อความทรงจำ...">
+                            <i class="fa-solid fa-check mr-save-title-btn" data-key="${item.key}"></i>
+                        </div>
+                        <div class="mr-fav-snippet">"${snippetText}"</div>
                     </div>
-                    ${titleDisplay}
-                    <div class="mr-title-edit-container">
-                        <input type="text" class="mr-fav-title-input" value="${item.customTitle || ''}" placeholder="ตั้งชื่อความทรงจำ...">
-                        <i class="fa-solid fa-check mr-save-title-btn" data-key="${item.key}"></i>
-                    </div>
-                    <div class="mr-fav-snippet">"${item.snippet}"</div>
-                </div>
-            `;
-            body.append(html);
+                `;
+                body.append(html);
+            } catch (err) {
+                console.error("[Message Reactions] Error rendering item:", item, err);
+            }
         });
     }
 }

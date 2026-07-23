@@ -1,92 +1,87 @@
 /* path: public/scripts/extensions/third-party/st-message-memory/style.css */
 
-/* --- 🌟 UI ปุ่มใต้แชท (Minimal & Cute) --- */
 .st-mm-button-container {
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
+    gap: 6px;
     margin-top: 6px;
     padding: 0 10px;
 }
 
 .st-mm-btn {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 20px; /* Pill shape */
+    background: var(--SmartThemeBlurTintColor, rgba(128, 128, 128, 0.1));
+    border: 1px solid var(--SmartThemeBorderColor, rgba(128, 128, 128, 0.2));
+    border-radius: 16px;
     padding: 5px 12px;
     cursor: pointer;
-    color: var(--SmartThemeBodyColor, #ccc);
-    font-size: 0.9em;
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    color: var(--SmartThemeBodyColor, inherit);
+    font-size: 0.85em;
+    transition: all 0.25s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    backdrop-filter: blur(4px);
 }
 
 .st-mm-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    background: var(--SmartThemeQuoteColor, rgba(128, 128, 128, 0.25));
+    transform: translateY(-1px);
 }
 
 .st-mm-btn.active-heart {
-    color: #ff4757;
-    background: rgba(255, 71, 87, 0.15);
-    border-color: rgba(255, 71, 87, 0.4);
+    color: #ff4757 !important;
+    background: rgba(255, 71, 87, 0.12) !important;
+    border-color: rgba(255, 71, 87, 0.3) !important;
 }
 
 .st-mm-btn.active-comment {
-    color: #1e90ff;
-    background: rgba(30, 144, 255, 0.15);
-    border-color: rgba(30, 144, 255, 0.4);
+    color: #1e90ff !important;
+    background: rgba(30, 144, 255, 0.12) !important;
+    border-color: rgba(30, 144, 255, 0.3) !important;
 }
 
-/* แอนิเมชันตอนกดหัวใจ */
 .pop-anim {
     animation: bouncePop 0.3s ease;
 }
 @keyframes bouncePop {
     0% { transform: scale(1); }
-    50% { transform: scale(1.3); }
+    50% { transform: scale(1.25); }
     100% { transform: scale(1); }
 }
 
-/* --- 📱 โมดัลแบบ iOS Glassmorphism --- */
 .st-mm-modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.45);
     z-index: 99999;
     display: flex;
     justify-content: center;
-    align-items: center; /* กึ่งกลางเสมอ */
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    padding: 15px; /* กันชนขอบจอ */
+    align-items: center;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    padding: 15px;
     box-sizing: border-box;
 }
 
-/* Panel หลัก (ไม่เกินจอ 100%) */
 .st-ios-panel {
-    background: var(--SmartThemeBlurTintColor, rgba(30, 30, 30, 0.85));
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 24px;
+    background: var(--SmartThemeBlurTintColor, var(--SmartThemeChatBackgroundColor, #ffffff));
+    border: 1px solid var(--SmartThemeBorderColor, rgba(0, 0, 0, 0.15));
+    color: var(--SmartThemeBodyColor, #000000);
+    border-radius: 20px;
     width: 100%;
     max-width: 500px;
-    max-height: 85vh; /* บังคับไม่ให้ทะลุขอบล่าง/บน */
+    max-height: 85vh;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-    animation: iosPopIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
+    animation: iosPopIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.2);
     overflow: hidden;
 }
 
 @keyframes iosPopIn {
-    0% { opacity: 0; transform: scale(0.9) translateY(20px); }
+    0% { opacity: 0; transform: scale(0.92) translateY(15px); }
     100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
@@ -94,25 +89,23 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 18px 22px;
-    background: rgba(0,0,0,0.1);
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--SmartThemeBorderColor, rgba(128, 128, 128, 0.2));
 }
 
 .st-mm-modal-header h2 {
     margin: 0;
-    font-size: 1.3rem;
+    font-size: 1.2rem;
     font-weight: 600;
-    color: var(--SmartThemeBodyColor);
-    letter-spacing: 0.5px;
+    color: var(--SmartThemeBodyColor, inherit);
 }
 
 .st-mm-close-btn {
-    background: rgba(255,255,255,0.1);
+    background: var(--SmartThemeBlurTintColor, rgba(128, 128, 128, 0.15));
     border: none;
-    color: var(--SmartThemeBodyColor);
-    width: 32px;
-    height: 32px;
+    color: var(--SmartThemeBodyColor, inherit);
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -123,14 +116,13 @@
 
 .st-mm-close-btn:hover {
     background: #ff4757;
-    color: white;
+    color: #ffffff;
 }
 
-/* Tabs */
 .st-mm-tabs {
     display: flex;
-    padding: 10px 15px 0;
-    background: rgba(0,0,0,0.05);
+    padding: 8px 12px 0;
+    border-bottom: 1px solid var(--SmartThemeBorderColor, rgba(128, 128, 128, 0.2));
 }
 
 .st-mm-tab {
@@ -138,13 +130,13 @@
     background: none;
     border: none;
     padding: 10px;
-    color: var(--SmartThemeBodyColor);
+    color: var(--SmartThemeBodyColor, inherit);
     font-weight: 600;
-    font-size: 0.95rem;
-    opacity: 0.5;
+    font-size: 0.9rem;
+    opacity: 0.6;
     cursor: pointer;
     position: relative;
-    transition: 0.3s;
+    transition: 0.25s;
 }
 
 .st-mm-tab.active {
@@ -155,24 +147,22 @@
 .st-mm-tab.active::after {
     content: '';
     position: absolute;
-    bottom: 0;
-    left: 20%;
-    width: 60%;
+    bottom: -1px;
+    left: 25%;
+    width: 50%;
     height: 3px;
     background: #1e90ff;
     border-radius: 3px 3px 0 0;
 }
 
-/* Scroll Area แบบ iOS */
 .ios-scroll {
     overflow-y: auto;
-    -webkit-overflow-scrolling: touch; /* ลื่นๆ ในมือถือ */
+    -webkit-overflow-scrolling: touch;
 }
 
-/* ซ่อน Scrollbar น่าเกลียด */
-.ios-scroll::-webkit-scrollbar { width: 6px; }
+.ios-scroll::-webkit-scrollbar { width: 5px; }
 .ios-scroll::-webkit-scrollbar-track { background: transparent; }
-.ios-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+.ios-scroll::-webkit-scrollbar-thumb { background: var(--SmartThemeBorderColor, rgba(128, 128, 128, 0.3)); border-radius: 10px; }
 
 .st-mm-list-container {
     flex: 1;
@@ -182,37 +172,36 @@
     gap: 12px;
 }
 
-/* List Item Cards */
 .ios-card {
-    background: rgba(255,255,255,0.06);
-    border-radius: 16px;
-    padding: 16px;
-    border: 1px solid rgba(255,255,255,0.05);
+    background: var(--SmartThemeBlurTintColor, rgba(128, 128, 128, 0.05));
+    border-radius: 14px;
+    padding: 14px;
+    border: 1px solid var(--SmartThemeBorderColor, rgba(128, 128, 128, 0.15));
     transition: transform 0.2s;
 }
 
 .ios-card:hover {
-    transform: scale(1.01);
-    background: rgba(255,255,255,0.08);
+    transform: scale(1.008);
 }
 
 .st-mm-item-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .st-mm-item-title {
     font-weight: 700;
-    font-size: 1.05rem;
-    color: #f1f2f6;
+    font-size: 1rem;
+    color: var(--SmartThemeBodyColor, inherit);
 }
 
 .st-mm-item-date {
     font-size: 0.75rem;
-    color: #a4b0be;
-    margin-top: 3px;
+    opacity: 0.6;
+    margin-top: 2px;
+    display: block;
 }
 
 .st-mm-item-actions {
@@ -221,93 +210,82 @@
 }
 
 .st-mm-action-btn {
-    background: rgba(255,255,255,0.1);
+    background: var(--SmartThemeBlurTintColor, rgba(128, 128, 128, 0.15));
     border: none;
-    color: var(--SmartThemeBodyColor);
-    width: 32px;
-    height: 32px;
+    color: var(--SmartThemeBodyColor, inherit);
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     transition: 0.2s;
 }
 
-.st-mm-action-btn:hover { background: #1e90ff; color: white; }
-.st-mm-delete-btn:hover { background: #ff4757; }
+.st-mm-action-btn:hover { background: #1e90ff; color: #ffffff; }
+.st-mm-delete-btn:hover { background: #ff4757 !important; color: #ffffff !important; }
 
 .st-mm-item-snippet {
-    font-size: 0.9rem;
-    color: #ced6e0;
+    font-size: 0.88rem;
+    opacity: 0.85;
     line-height: 1.4;
-    padding: 10px;
-    background: rgba(0,0,0,0.2);
-    border-radius: 10px;
-    position: relative;
-}
-.st-mm-item-snippet::before {
-    content: "❝";
-    position: absolute;
-    top: -5px;
-    left: -2px;
-    font-size: 1.5rem;
-    color: rgba(255,255,255,0.1);
+    padding: 8px 10px;
+    background: var(--SmartThemeQuoteColor, rgba(128, 128, 128, 0.1));
+    border-radius: 8px;
+    border-left: 3px solid #1e90ff;
 }
 
 .st-mm-item-comment-text {
-    margin-top: 12px;
-    font-size: 0.95rem;
-    color: #7bed9f;
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: #2ed573;
     font-weight: 500;
-    background: rgba(123, 237, 159, 0.1);
-    padding: 10px;
-    border-radius: 10px;
+    background: rgba(46, 213, 115, 0.1);
+    padding: 8px 10px;
+    border-radius: 8px;
 }
 
-/* Empty State */
 .st-mm-empty {
     text-align: center;
-    color: #a4b0be;
+    opacity: 0.6;
     padding: 40px 20px;
-    font-size: 1.1rem;
     display: flex;
     flex-direction: column;
     gap: 10px;
+    font-size: 1rem;
 }
-.st-mm-empty i { font-size: 3rem; opacity: 0.5; }
+.st-mm-empty i { font-size: 2.5rem; }
 
-/* --- 📝 Comment Modal Specific --- */
 .st-mm-comment-box {
-    max-height: unset; /* ให้สูงพอดีเนื้อหา */
+    max-height: unset;
 }
 
 .st-mm-modal-body {
-    padding: 20px;
+    padding: 18px 20px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 14px;
 }
 
 .st-ios-input {
     width: 100%;
-    background: rgba(0,0,0,0.2) !important;
-    color: var(--SmartThemeBodyColor, #fff) !important;
-    border: 1px solid rgba(255,255,255,0.1) !important;
-    border-radius: 14px !important;
-    padding: 14px !important;
+    background: var(--SmartThemeBlurTintColor, rgba(128, 128, 128, 0.08)) !important;
+    color: var(--SmartThemeBodyColor, inherit) !important;
+    border: 1px solid var(--SmartThemeBorderColor, rgba(128, 128, 128, 0.25)) !important;
+    border-radius: 12px !important;
+    padding: 12px !important;
     font-family: inherit;
-    font-size: 1rem !important;
-    transition: 0.3s;
+    font-size: 0.95rem !important;
     box-sizing: border-box;
+    transition: 0.25s;
 }
 
 .st-ios-input:focus {
     outline: none !important;
     border-color: #1e90ff !important;
-    background: rgba(0,0,0,0.4) !important;
-    box-shadow: 0 0 0 3px rgba(30,144,255,0.2) !important;
+    box-shadow: 0 0 0 3px rgba(30, 144, 255, 0.2) !important;
 }
 
 textarea.st-ios-input {
@@ -318,39 +296,39 @@ textarea.st-ios-input {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
-    padding: 15px 20px 20px;
+    padding: 12px 20px 18px;
+    border-top: 1px solid var(--SmartThemeBorderColor, rgba(128, 128, 128, 0.2));
 }
 
 .st-mm-btn-ios-primary {
     background: #1e90ff;
-    color: #fff;
+    color: #ffffff;
     border: none;
-    padding: 10px 20px;
-    border-radius: 20px;
+    padding: 9px 18px;
+    border-radius: 16px;
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(30,144,255,0.4);
+    box-shadow: 0 4px 12px rgba(30, 144, 255, 0.35);
     transition: 0.2s;
 }
-.st-mm-btn-ios-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(30,144,255,0.6); }
+.st-mm-btn-ios-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(30, 144, 255, 0.5); }
 
 .st-mm-btn-ios-secondary {
-    background: rgba(255,255,255,0.1);
-    color: var(--SmartThemeBodyColor);
+    background: var(--SmartThemeBlurTintColor, rgba(128, 128, 128, 0.15));
+    color: var(--SmartThemeBodyColor, inherit);
     border: none;
-    padding: 10px 20px;
-    border-radius: 20px;
+    padding: 9px 18px;
+    border-radius: 16px;
     font-weight: 600;
     cursor: pointer;
     transition: 0.2s;
 }
-.st-mm-btn-ios-secondary:hover { background: rgba(255,255,255,0.2); }
+.st-mm-btn-ios-secondary:hover { background: var(--SmartThemeBlurTintColor, rgba(128, 128, 128, 0.25)); }
 
-/* Effect ตอนกด Warp ไปหาข้อความ */
 .ios-blink {
     animation: warpHighlight 2s ease-out;
 }
 @keyframes warpHighlight {
-    0% { background-color: rgba(30,144,255,0.4); box-shadow: 0 0 20px rgba(30,144,255,0.5); }
+    0% { background-color: rgba(30, 144, 255, 0.35); box-shadow: 0 0 15px rgba(30, 144, 255, 0.4); }
     100% { background-color: transparent; box-shadow: none; }
 }

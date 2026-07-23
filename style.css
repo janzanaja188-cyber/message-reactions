@@ -37,3 +37,101 @@
 .pop-anim {
     animation: pop 0.3s ease-out;
 }
+
+/* --- ส่วนปุ่มรีแอคชันท้ายข้อความ (ของเดิม) --- */
+.msg-reaction-container { opacity: 0.7; transition: opacity 0.2s ease-in-out; }
+.mes:hover .msg-reaction-container { opacity: 1; }
+.reaction-btn { cursor: pointer; padding: 6px; border-radius: 50%; background: rgba(0, 0, 0, 0.05); color: var(--SmartThemeBodyColor); transition: all 0.2s; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; }
+.active-heart { color: #ff4b4b !important; text-shadow: 0 0 5px rgba(255, 75, 75, 0.5); }
+@keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.4); } 100% { transform: scale(1); } }
+.pop-anim { animation: pop 0.3s ease-out; }
+
+/* --- ส่วนปุ่มลอย (FAB) --- */
+#mr-floating-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: var(--SmartThemeQuoteColor);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    z-index: 9999; /* ให้อยู่บนสุดเสมอ */
+    cursor: grab;
+    background-size: cover;
+    background-position: center;
+    border: 2px solid var(--SmartThemeBodyColor);
+    display: none; /* ซ่อนไว้ก่อน ค่อยโชว์ตอนมีแชท */
+}
+#mr-floating-btn:active { cursor: grabbing; }
+
+/* ตัวเลขแจ้งเตือนบนปุ่ม */
+#mr-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #ff4b4b;
+    color: white;
+    border-radius: 50%;
+    padding: 2px 6px;
+    font-size: 10px;
+    font-weight: bold;
+    display: none;
+}
+
+/* --- ส่วนหน้าต่างรายการโปรด --- */
+#mr-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 400px;
+    max-height: 80vh;
+    background: var(--SmartThemeBlurTintColor);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 10px;
+    z-index: 10000;
+    display: none;
+    flex-direction: column;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+
+#mr-modal-header {
+    padding: 15px;
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+}
+
+#mr-close-btn { cursor: pointer; color: #ff4b4b; font-size: 1.2em; }
+
+#mr-modal-body {
+    padding: 15px;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+.mr-fav-item {
+    background: rgba(0,0,0,0.2);
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    position: relative;
+}
+
+.mr-fav-header { font-size: 0.8em; opacity: 0.7; margin-bottom: 5px; }
+.mr-fav-title-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed var(--SmartThemeBorderColor);
+    color: var(--SmartThemeBodyColor);
+    font-weight: bold;
+    margin-bottom: 5px;
+    outline: none;
+}
+.mr-fav-snippet { font-size: 0.9em; font-style: italic; opacity: 0.8; }

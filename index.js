@@ -1,5 +1,5 @@
 import { getContext } from "../../../extensions.js";
-import { eventSource, event_types, saveSettingsDebounced } from "../../../../script.js";
+import { eventSource, event_types } from "../../../../script.js";
 
 const extensionName = "message-reactions";
 let reactionsDB = {};
@@ -15,73 +15,85 @@ function saveReactions() {
     localStorage.setItem(`${extensionName}_db`, JSON.stringify(reactionsDB));
 }
 
-// ฟังก์ชันสร้างรหัสเฉพาะให้แต่ละข้อความ
-function generateUniqueId(msgElement) {
+// ฟังก์ชันหลักที่ทำงานร่วมกับระบบเรนเดอร์ของ ST
+function processMessage(mesId) {
     const context = getContext();
-    const characterId = context.characterId || "unknown_char";
-    const mesId = msgElement.attr('mesid');
-    const sendTime = msgElement.attr('send_date') || "no_time";
+    // ดึงข้อมูลข้อความจาก Array ของแชทปัจจุบันโดยตรง
+    const chatData = context.chat;
 
-    // รวมชื่อแชท, ลำดับ, และเวลาเข้าด้วยกัน จะได้ไม่ซ้ำกันเด็ดขาด
-    return `${characterId}_${mesId}_${sendTime}`;
+    if (!chatData || !chatData[mesId]) return;
+
+    const msgData = chatData[mesId];
+
+    // เช็คจากระดับข้อมูล: ถ้าเป็นข้อความฝั่งผู้ใช้ (is_user เป็น true) ให้หยุดทำงานทันที!
+    if (msgData.is_user) {
+        return;
+    }
+
+    // หา DOM element ของข้อความนี้
+    const msgElement = $(`.mes[mesid="${mesId}"]`);
+
+    // ถ้ามีปุ่มอยู่แล้ว ไม่ต้องใส่ซ้ำ
+    if (msgElement.find('.msg-reaction-container').length > 0) return;
+
+    // สร้าง Unique Key จาก ID ตัวละคร + ลำดับข้อความ + เวลาที่ส่ง (ระดับมิลลิวินาที)
+    const characterId = context.characterId || "unknown";
+    const sendTime = msgData.send_date || Date.now();
+    const uniqueKey = `${characterId}_${mesId}_${sendTime}`;
+
+    const isFavorited = reactionsDB[uniqueKey]?.is_favorited || false;
+    const heartClass = isFavorited ? 'fa-solid active-heart' : 'fa-regular';
+
+    const btnHtml = `
+        <div class="msg-reaction-container" style="display: flex; gap: 8px; margin-top: 5px; padding-left: 10px;">
+            <div class="reaction-btn heart-btn" title="Like" data-uniquekey="${uniqueKey}">
+                <i class="fa-heart ${heartClass}"></i>
+            </div>
+            <div class="reaction-btn comment-btn" title="Comment" data-uniquekey="${uniqueKey}">
+                <i class="fa-regular fa-comment"></i>
+            </div>
+        </div>
+    `;
+
+    msgElement.find('.mes_text').after(btnHtml);
 }
 
-function addReactionButtons() {
-    // แก้บั๊กฝั่ง User: ใช้ Selector ที่เจาะจงเฉพาะข้อความฝั่งตรงข้าม
-    // ข้อความฝั่งเราปกติจะมีคลาส mes_you หรือไม่ก็ถูกห่อในโครงสร้างอื่น
-    const messages = $('.mes:not(.has-reaction-btn)');
+// ฟังก์ชันกวาดข้อความทั้งหมดเมื่อโหลดแชทใหม่
+function processAllMessages() {
+    const context = getContext();
+    if (!context.chat) return;
 
-    messages.each(function() {
-        const msg = $(this);
-        const chName = msg.attr('ch_name');
-
-        // ตัวกรองขั้นสูงสุด: ตรวจสอบหลายเงื่อนไข
-        const isUserMessage =
-            msg.attr('is_user') === 'true' ||
-            msg.hasClass('mes_you') ||
-            chName === 'You' ||
-            msg.find('.name_text').text().trim() === 'You' ||
-            msg.find('.avatar-container img').attr('src')?.includes('user');
-
-        if (isUserMessage) {
-            return; // เจอฝั่งคุณ ข้ามทิ้งทันที!
-        }
-
-        // สร้างรหัสเฉพาะของข้อความนี้
-        const uniqueMsgId = generateUniqueId(msg);
-        const isFavorited = reactionsDB[uniqueMsgId]?.is_favorited || false;
-        const heartClass = isFavorited ? 'fa-solid active-heart' : 'fa-regular';
-
-        const btnHtml = `
-            <div class="msg-reaction-container" style="display: flex; gap: 8px; margin-top: 5px; padding-left: 10px;">
-                <div class="reaction-btn heart-btn" title="Like" data-uniquekey="${uniqueMsgId}">
-                    <i class="fa-heart ${heartClass}"></i>
-                </div>
-                <div class="reaction-btn comment-btn" title="Comment" data-uniquekey="${uniqueMsgId}">
-                    <i class="fa-regular fa-comment"></i>
-                </div>
-            </div>
-        `;
-
-        msg.find('.mes_text').after(btnHtml);
-        msg.addClass('has-reaction-btn');
-    });
+    // วนลูปตามจำนวนข้อความที่มีในข้อมูลแชท
+    for (let i = 0; i < context.chat.length; i++) {
+        processMessage(i);
+    }
 }
 
 jQuery(async () => {
-    console.log(`[${extensionName}] Loading... (Bug Fixes: Anti-Sync & Strict User Filter)`);
+    console.log(`[${extensionName}] Loading... (Data-Level Injection)`);
 
     loadReactions();
-    addReactionButtons();
 
-    eventSource.on(event_types.CHAT_CHANGED, addReactionButtons);
-    eventSource.on(event_types.MESSAGE_RECEIVED, addReactionButtons);
-    eventSource.on(event_types.MESSAGE_UPDATED, addReactionButtons);
+    // ทำงานเมื่อโหลดแชทเสร็จ
+    eventSource.on(event_types.CHAT_CHANGED, processAllMessages);
 
-    // ระบบบันทึกที่อิงจาก Unique Key
+    // ทำงานเมื่อมีข้อความใหม่เข้ามา
+    eventSource.on(event_types.MESSAGE_RECEIVED, (mesId) => {
+        // หน่วงเวลาเล็กน้อยให้ DOM เรนเดอร์เสร็จก่อน
+        setTimeout(() => processMessage(mesId), 100);
+    });
+
+    // ทำงานเมื่อข้อความถูกแก้ไข (ปัดขวา/แก้ไขข้อความ)
+    eventSource.on(event_types.MESSAGE_UPDATED, (mesId) => {
+        setTimeout(() => processMessage(mesId), 100);
+    });
+
+    // ระบบบันทึก
     $(document).on('click', '.heart-btn', function() {
         const icon = $(this).find('i');
-        const uniqueKey = $(this).attr('data-uniquekey'); // ดึงรหัสเฉพาะมาใช้
+        const uniqueKey = $(this).attr('data-uniquekey');
+
+        if (!uniqueKey) return;
 
         if (!reactionsDB[uniqueKey]) reactionsDB[uniqueKey] = {};
 

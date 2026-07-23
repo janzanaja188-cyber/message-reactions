@@ -1,11 +1,11 @@
 {
-  "display_name": "Message Reactions",
-  "loading_order": 100,
-  "requires": [],
-  "optional": [],
-  "js": "index.js",
-  "css": "style.css",
-  "author": "January",
-  "version": "1.0.0",
-  "homePage": ""
+    "display_name": "Message Reactions & Memory",
+    "js": "index.js",
+    "css": "style.css",
+    "author": "SillyTavern Architect",
+    "version": "1.0.0",
+    "auto_update": true,
+    "homePage": "",
+    "requires": [],
+    "description": "เพิ่มปุ่มกดหัวใจ คอมเมนต์ และสมุดความจำท้ายข้อความของ NPC (รองรับ Mobile 100%)"
 }
